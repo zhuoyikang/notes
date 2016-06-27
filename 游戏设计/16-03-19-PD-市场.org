@@ -1,0 +1,19 @@
+#+SETUPFILE: ../css/level-1.orgcss
+#+TITLE: 市场
+
+* 独立游戏如何做市场调研
+
+[[http://www.indiegames.cn/igd/development-experience/5187.html][链接]]
+
+* 我需要调研什么？
+
+游戏主题
+游戏核心机制（类型）
+受众
+市场&竞品
+
+* 主题
+
+可以通过电影、电视节目、漫画和书籍的销量以及受众统计来调研你的主题。大多数都可以在Statista、Box Office Mojo和IMDB上找到，甚至Google Trends也有用。
+
+* 游戏核心机制

@@ -1,0 +1,11 @@
+#+SETUPFILE: ../css/level-1.orgcss
+#+TITLE: 马里奥关卡设计法
+
+http://www.indiegames.cn/igd/zhihu/4610.html
+
+* 挑战
+
+首先需要定义并理解什么是”挑战“。
+一个挑战是指被安全边界包围的、玩家必须一次性完成的、一小段任务。
+
+
