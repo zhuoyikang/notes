@@ -1,5 +1,1 @@
-programming life code
-
-#+begin_src erlang
-note.x
-#+end_src
+编程笔记.
