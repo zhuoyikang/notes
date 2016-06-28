@@ -1,0 +1,47 @@
+今天犯了一个错误，我在mac下开发了一个网络程序，放到windows上配合调试，也就是windows+mac客户端，使用unity3d开发。初始状态的物体移动速度我都是设置的0.05，但是windows下面表现出来的运动速度要几乎比Mac下快一倍。
+
+我百思不得其姐，终于醒悟过来我是在update函数中做的移动操作，那windows和mac的帧率可能不同，速度当然就不一样咯。于是我速度找了个显示FPS的程序，果然是帧率不同。
+
+| 平台    | 帧率 | 显卡 |
+| mac     |   30 | 无   |
+| windows |   30 | 430  |
+
+* 显示帧率的代码
+
+#+begin_src csharp
+  using UnityEngine;
+  using System.Collections;
+
+  public class Fps : MonoBehaviour
+  {
+      public float updateInterval = 0.5F;
+      private double lastInterval;
+      private int frames = 0;
+      private float fps;
+      void Start()
+      {
+          lastInterval = Time.realtimeSinceStartup;
+          frames = 0;
+      }
+      void OnGUI()
+      {
+          GUILayout.Label(" " + fps.ToString("f2"));
+      }
+      void Update()
+      {
+          ++frames;
+          float timeNow = Time.realtimeSinceStartup;
+          if (timeNow > lastInterval + updateInterval)
+          {
+              fps = (float)(frames / (timeNow - lastInterval));
+              frames = 0;
+              lastInterval = timeNow;
+          }
+      }
+  }
+
+#+end_src
+
+将此脚本挂到任何一个物体上即可。
+
+* 渲染帧和逻辑帧
