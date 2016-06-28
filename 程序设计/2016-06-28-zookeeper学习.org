@@ -1,6 +1,7 @@
 * 主要功能介绍
 [[http://www.cnblogs.com/sharpxiajun/archive/2013/06/02/3113923.html][参考文章1 ]]
 [[http://www.ibm.com/developerworks/cn/data/library/bd-zookeeper/][ZooKeeper 基础知识、部署和应用程序-IBM]]
+[[https://www.zhihu.com/question/35139415][ZooKeeper & kazoo]]
 
 ** 统一命名服务
 
@@ -13,7 +14,6 @@
 
 *** 同步
 与互斥同时出现的是同步访问共享资源的需求。无论是实现一个生产者-消费者队列，还是实现一个障碍，ZooKeeper 都提供一个简单的接口来实现该操作。您可以在 Apache ZooKeeper 维基上查看示例，了解如何做到这一点（参阅 参考资料）。
-
 
 ** 配置管理
 
@@ -39,6 +39,7 @@ mkdir /var/lib/zookeeper
 #+end_src
 
 3.设置配置。创建或编辑 zookeeper3.4.5/conf/zoo.cfg 文件
+
 #+begin_src sh
 tickTime=2000
 dataDir=/var/lib/zookeeper clientPort=2181
@@ -58,10 +59,70 @@ zookeeper3.4.5/bin/zkServer.sh start
 #+end_src
 
 现在，您可以从其中一台正在运行 ZooKeeper 服务器的机器上启动一个 CLI 客户端。
-清单 5. 启动 CLI 客户端
-zookeeper3.4.5/ bin/zkCli.sh server
+
+#+begin_src sh
+zookeeper3.4.5/bin/zkCli.sh server
 zkserver1.mybiz.com:2181,zkserver2.mybiz.com:2181,zkserver3.mybiz.com:2181
 
+# 客户端.
+sudo ./zkCli.sh
+#+end_src
+
+** 基本的使用
+
+#+begin_src sh
+[zk: localhost:2181(CONNECTED) 16] create /zk_test my_data
+Created /zk_test
+
+[zk: localhost:2181(CONNECTED) 16] ls  /
+[zookeeper, zk_test]
+
+[zk: localhost:2181(CONNECTED) 16] get /zk_test
+my_data
+cZxid = 0x2
+ctime = Tue Jun 28 11:32:18 CST 2016
+mZxid = 0x2
+mtime = Tue Jun 28 11:32:18 CST 2016
+pZxid = 0x2
+cversion = 0
+dataVersion = 0
+aclVersion = 0
+ephemeralOwner = 0x0
+dataLength = 7
+numChildren = 0
+#+end_src
 
 
+在讲解这些参数之前先介绍一下一个概念：
 
+ZooKeeper以多种方式跟踪时间
+
++ zxid：每次修改ZooKeeper状态都会收到一个zxid形式的时间戳，也就是ZooKeeper事务ID。事务ID是ZooKeeper中所有修改总的次序。每个修改都有唯一的zxid，如果zxid1小于zxid2，那么zxid1在zxid2之前发生。
+版本号：对节点的每次修改将使得节点的版本号增加一。版本号有三种：version（znode数据修改的次数）、cversion（znode子节点修改的次数），以及aversion（znode的ACL修改次数）。
++ tick：多服务器ZooKeeper中，服务器使用tick来定义状态上传、会话超时、节点间连接超时等事件的时序。tick仅被最小会话超时（2倍的tick时间)间接使用：如果客户端要求小于最小会话超时的时间，服务器将告知客户端，实际使用的是最小会话超时。
++ 真实时间：除了在创建和修改znode时将时间戳放入stat结构体中之外，ZooKeeper不使用真实时间，或者说时钟时间。
+
+
+get获得的参数的意思是->
+
+
++ czxid：创建节点的事务的zxid
++ mzxid：对znode最近修改的zxid
++ ctime：以距离时间原点(epoch)的毫秒数表示的znode创建时间
++ mtime：以距离时间原点(epoch)的毫秒数表示的znode最近修改时间
++ pzxid：子节点的最后版本
++ cversion：znode子节点修改次数
++ dataVersion：数据的版本
++ aclVersion：znode的ACL修改次数
++ ephemeralOwner：如果znode是临时节点，则指示节点所有者的会话ID；如果不是临时节点，则为零。
++ dataLength：znode数据长度。
++ numChildren：znode子节点个数。
+
+
+*什么是ACL ?*
+
+ZooKeeper使用ACL控制对节点的访问。ACL的实现同Unix文件访问权限非常相似：采用权限位来定义允许/禁止的各种节点操作，以及位应用的范围。与标准Unix权限不同的是，ZooKeeper节点不由用户(文件所有者)、组和其他这三个标准范围来限制。ZooKeeper没有节点所有者的概念。取而代之的是，ACL指定一个ID集合，以及与这些ID相关联的权限。
+
+还要注意的是，ACL仅仅用于某特定节点。特别是，ACL不会应用到子节点。比如说，/app只能被ip:172.16.16.1读取，/app/status可以被所有用户读取。ACL不是递归的。ZooKeeper支持可插入式鉴权模式。使用scheme:id的形式指定ID，其中scheme是id对应的鉴权模式。比如说，ip:172.16.16.1是地址为172.16.16.1的主机的ID。
+
+客户端连接到ZooKeeper，验证自身的时候，ZooKeeper将所有对应客户端的ID都关联到客户端连接上。客户端试图存取节点的时候，ZooKeeper会在节点的ACL中校验这些ID。ACL由(scheme:expression,perms)对组成。expression的格式是特定于scheme的。比如说，(ip:19.22.0.0/16,READ)给予任何IP地址以19.22开头的客户端以READ权限。
