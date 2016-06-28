@@ -1,7 +1,8 @@
 * 主要功能介绍
-[[http://www.cnblogs.com/sharpxiajun/archive/2013/06/02/3113923.html][参考文章1 ]]
-[[http://www.ibm.com/developerworks/cn/data/library/bd-zookeeper/][ZooKeeper 基础知识、部署和应用程序-IBM]]
-[[https://www.zhihu.com/question/35139415][ZooKeeper & kazoo]]
++ [[http://www.cnblogs.com/sharpxiajun/archive/2013/06/02/3113923.html][参考文章1 ]]
++ [[http://www.ibm.com/developerworks/cn/data/library/bd-zookeeper/][ZooKeeper 基础知识、部署和应用程序-IBM]]
++ [[https://www.zhihu.com/question/35139415][ZooKeeper & kazoo]]
+
 
 ** 统一命名服务
 
@@ -126,3 +127,97 @@ ZooKeeper使用ACL控制对节点的访问。ACL的实现同Unix文件访问权�
 还要注意的是，ACL仅仅用于某特定节点。特别是，ACL不会应用到子节点。比如说，/app只能被ip:172.16.16.1读取，/app/status可以被所有用户读取。ACL不是递归的。ZooKeeper支持可插入式鉴权模式。使用scheme:id的形式指定ID，其中scheme是id对应的鉴权模式。比如说，ip:172.16.16.1是地址为172.16.16.1的主机的ID。
 
 客户端连接到ZooKeeper，验证自身的时候，ZooKeeper将所有对应客户端的ID都关联到客户端连接上。客户端试图存取节点的时候，ZooKeeper会在节点的ACL中校验这些ID。ACL由(scheme:expression,perms)对组成。expression的格式是特定于scheme的。比如说，(ip:19.22.0.0/16,READ)给予任何IP地址以19.22开头的客户端以READ权限。
+* 编程
+
+** zk驱动: https://github.com/huaban/erlzk
+erlzk is A Pure Erlang ZooKeeper Client (no C dependency).
+
+#+begin_src sh
+git clone https://github.com/huaban/erlzk.git
+make
+erl -pa ebin
+
+> erlzk:start().
+> {ok, Pid} = erlzk:connect([{"localhost", 2181}], 30000).
+#+end_src
+
+例子代码:
+
+#+begin_src erlang
+% Include the hrl first
+-include_lib("erlzk/include/erlzk.hrl").
+
+% Create a node with the given path, return the actual path of the node
+{ok, "/a"} = erlzk:create(Pid, "/a").
+
+% Determine if a node exists, return the stat of the node
+{ok, Stat} = erlzk:exists(Pid, "/a").
+
+% Update the data for a given node, use the current version of the node for data security
+{ok, _Stat} = erlzk:set_data(Pid, "/a", <<"b">>, Stat#stat.version).
+
+% Get the data of the node
+{ok, {<<"b">>, _Stat}} = erlzk:get_data(Pid, "/a").
+
+% Add a auth, username is "foo", password is "bar"
+ok = erlzk:add_auth(Pid, "foo", "bar").
+
+% Set the ACL of the node, now only the creator has all the permissions
+{ok, _Stat} = erlzk:set_acl(Pid, "/a", ?ZK_ACL_CREATOR_ALL_ACL).
+
+% Get the ACL of the node, Acl should equals to [{rwcdr,"digest",erlzk:generate_digest("foo", "bar")}]
+{ok, {Acl, _Stat}} = erlzk:get_acl(Pid, "/a")).
+
+% Create some children of the node
+{ok, "/a/a0000000000"} = erlzk:create(P, "/a/a", persistent_sequential).
+{ok, "/a/b"} = erlzk:create(P, "/a/b").
+
+% Get the children of the node, Children should include "a0000000000" and "b"
+{ok, Children} = erlzk:get_children(P, "/a").
+
+% Delete the node, delete all the children before parent
+ok = erlzk:delete(Pid, "/a/a0000000000").
+ok = erlzk:delete(Pid, "/a/b").
+ok = erlzk:delete(Pid, "/a").
+#+end_src
+
+watcher
+#+begin_src erlang
+  % set an exists watch
+  erlzk:exists(Pid, "/b", spawn(fun() ->
+          receive
+              % receive a watch event
+              {Event, Path} ->
+                 io:format("event ~p path ~p", [Event, Path])
+          end
+      end)),
+  % create a node trigger the watch
+  {ok, "/a"} = erlzk:create(Pid, "/a").
+
+
+  Wather = spawn(fun() ->
+      receive
+          % receive a node deleted event
+          {Event, Path} ->
+              Path = "/a",
+              Event = node_deleted
+      end
+  end),
+
+  {ok, "/a"} = erlzk:create(Pid, "/a"),
+
+  % call exists and get_data to a same path with a same watcher
+  erlzk:exists(Pid, "/a", Watcher),
+  erlzk:get_data(Pid, "/a", Watcher),
+
+  % delete the node will trigger the watcher once
+  erlzk:delete(Pid, "/a").
+
+#+end_src
+
+** ZooKeeper Programmer's Guide
+
+https://zookeeper.apache.org/doc/trunk/zookeeperProgrammers.html
+
+
+
