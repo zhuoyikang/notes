@@ -110,14 +110,97 @@ while( game_is_running )
 * 逻辑帧稳定为每秒16帧
 看了上面的强悍博文，我只需要在update函数内部实现一个16fps的逻辑帧计算就行了。
 
-
 另外Unity提供了FixUpdate也可以用
 
 #+begin_src csharp
-void FixedUpdate() {
-    m_transform.position += _Move*_speed;
+  // 逻辑帧16 fps
+  void FixedUpdate() {
+      _fixCount +=1;
+      if(_fixCount % 4 != 0) {
+          return;
+      }
+
+      m_transform.position += _Move*_speed;
+      _fixCount = 0;
+
+  }
+
+#+end_src
+
+这样修改后，客户端可以明显看到物体移动时卡顿，看来还得另想办法，关键在与：逻辑帧16/s就可以呢，但是渲染帧是可以按机器性能跑满的。
+
+FixedUpdate的时间间隔可以在项目设置中更改，Edit->Project Setting->time  找到Fixed timestep。就可以修改了。
+
+*LateUpdate*
+
+如果你有两个脚本JS1、JS2，两个脚本中都有Update()函数, 在JS1中有 lateUpdate ,JS2中没有。那么 lateUpdate 函数会等待JS1、JS2两个脚本的Update()函数 都执行完后才执行。也就是说, 如果现在有100个脚本，分别有100个 Update()函数，其中只有一个LateUpdate，那么在同一祯中，等待100个Update()执行完后，才执行这一个lateUpdate()。
+
+* 独立的可变显示FPS和恒定的游戏速度
+
+#+begin_src c++
+const int TICKS_PER_SECOND = 25;
+const int SKIP_TICKS = 1000 / TICKS_PER_SECOND;
+const int MAX_FRAMESKIP = 5;
+DWORD next_game_tick = GetTickCount();// 返回当前的系统已经运行的毫秒数
+int loops;
+float interpolation;
+bool game_is_running = true;
+while( game_is_running ) 
+{
+　　loops = 0;
+　　while( GetTickCount() > next_game_tick && loops < MAX_FRAMESKIP ) 
+    {
+　　    update_game();
+　　    next_game_tick += SKIP_TICKS;
+　　    loops++;
+　　}
+　　interpolation = float( GetTickCount() + SKIP_TICKS - next_game_tick ) / float( SKIP_TICKS );
+　　display_game( interpolation );
 }
 #+end_src
+
+* 在u3d中实现帧同步
+
++ http://jjyy.guru/unity3d-lock-step-part-1
++ http://jjyy.guru/unity3d-lock-step-part-2
+
+在帧同步模型中，每个客户端都会对整个游戏世界进行模拟。这种方法的好处在于减少了需要发送的信息。帧同步只需要发送用户的输入信息，而对于反过来的中心服务器模型来说，单位的信息则发送越频繁越好。
+
+比如说你在游戏世界中移动角色。在中心服务器模型中，物理模拟只会在服务器执行。客户端告诉服务器，角色要往哪个方向移动。服务器会执行寻路而且开始移动角色。服务器紧接着就会尽可能频繁地告知每个客户端该角色的位置。对于游戏世界中的每个角色都要运行这样的过程。对于实时策略游戏来说，同步成千上万的单位在中心服务器模型中几乎是不可能的任务。
+
+在帧同步模型中，在用户决定移动角色之后，就会告诉所有客户端。每个客户端都会执行寻路以及更新角色位置。只有用户输入的时候才需要通知每个客户端，然后每个客户端都会自己更新物理以及位置。
+
+这个模型带来了一些问题。每个客户端的模拟都必须执行得一模一样。这意味着，物理模拟必须执行同样的更新次数而且每个动作都需要同样的顺序执行。如果不这么做，其中一个客户端就会跑在其他客户端之前或者之后，然后在新的命令发出之后，跑得太快或者太慢的客户端走出的路径就会不同。这些不同会根据不同的游戏玩法而不同。
+
+另一个问题就是跨不同的机器和平台的确定性问题。计算上很小的不同都会对游戏造成蝴蝶效应。这个问题会在后续的文章中讲到。
+
+这里的实现方案灵感来自于这篇文章：[[http://www.gamasutra.com/view/feature/3094/][《1500个弓箭手》]] 。每个玩家命令都会在后续的两个回合中执行。在发送动作与处理动作之间存在延迟有助于对抗网络延迟。这个实现还给我们留下了根据延迟以及机器性能动态调整每回合时长的空间。这部分在这里先不讨论，会在后续文章再说。
+
+对于这个实现，我们有如下定义：
+
+帧同步回合：帧同步回合可以由多个游戏回合组成。玩家在一个帧同步回合执行一个动作。帧同步回合长度会根据性能调整。目前硬编码为200ms。
+游戏回合：游戏回合就是游戏逻辑和物理模拟的更新。每个帧同步回合拥有的游戏回合次数是由性能控制的。目前硬编码为50ms，也就是每次帧同步回合有4次游戏回合。也就是每秒有20次游戏回合。
+动作：一个动作就是玩家发起的一个命令。比如说在某个区域内选中单位，或者移动选中单位到目的地。
+
+注意：我们将不使用unity3d的物理引擎。而是使用一个确定性的自定义引擎。在后续文章中会有实现。
+
+游戏主循环
+
+Unity3d的循环是运行在单线程下的。可以通过在这两个函数插入自定义代码：
+
+#+begin_src csharp
+Update()
+FixedUpdate()
+#+end_src
+
+Unity3d的主循环每次遍历更新都会调用Update()。主循环会以最快速度运行，除非设置了固定的帧率。FixedUpdate()会根据设置每秒执行固定次数。在主循环遍历中，它会被调用零次或多次，取决于上次遍历所花费的时间。FixedUpdate()有着我们想要的行为，就是每次帧同步回合都执行固定时长。但是，FixedUpdate()的频率只能在运行之前设置好。而我们希望可以根据性能调节我们的游戏帧率。
+
+
+
+
+
+
+
 
 
 
