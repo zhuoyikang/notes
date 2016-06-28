@@ -127,6 +127,7 @@ ZooKeeper使用ACL控制对节点的访问。ACL的实现同Unix文件访问权�
 还要注意的是，ACL仅仅用于某特定节点。特别是，ACL不会应用到子节点。比如说，/app只能被ip:172.16.16.1读取，/app/status可以被所有用户读取。ACL不是递归的。ZooKeeper支持可插入式鉴权模式。使用scheme:id的形式指定ID，其中scheme是id对应的鉴权模式。比如说，ip:172.16.16.1是地址为172.16.16.1的主机的ID。
 
 客户端连接到ZooKeeper，验证自身的时候，ZooKeeper将所有对应客户端的ID都关联到客户端连接上。客户端试图存取节点的时候，ZooKeeper会在节点的ACL中校验这些ID。ACL由(scheme:expression,perms)对组成。expression的格式是特定于scheme的。比如说，(ip:19.22.0.0/16,READ)给予任何IP地址以19.22开头的客户端以READ权限。
+
 * 编程
 
 ** zk驱动: https://github.com/huaban/erlzk
@@ -172,6 +173,7 @@ ok = erlzk:add_auth(Pid, "foo", "bar").
 {ok, "/a/a0000000000"} = erlzk:create(P, "/a/a", persistent_sequential).
 {ok, "/a/b"} = erlzk:create(P, "/a/b").
 
+
 % Get the children of the node, Children should include "a0000000000" and "b"
 {ok, Children} = erlzk:get_children(P, "/a").
 
@@ -182,6 +184,7 @@ ok = erlzk:delete(Pid, "/a").
 #+end_src
 
 watcher
+
 #+begin_src erlang
   % set an exists watch
   erlzk:exists(Pid, "/b", spawn(fun() ->
@@ -219,5 +222,22 @@ watcher
 
 https://zookeeper.apache.org/doc/trunk/zookeeperProgrammers.html
 
+* 命名服务
+
+命名服务是指通过指定的名字来获取资源或者服务的地址，提供者的信息。利用Zookeeper很容易创建一个全局的路径，而这个路径就可以作为一个名字，它可以指向集群中的集群，提供的服务的地址，远程对象等。简单来说使用Zookeeper做命名服务就是用路径作为名字，路径上的数据就是其名字指向的实体。
+
+阿里巴巴集团开源的分布式服务框架Dubbo中使用ZooKeeper来作为其命名服务，维护全局的服务地址列表。在Dubbo实现中：
+
+服务提供者在启动的时候，向ZK上的指定节点/dubbo/${serviceName}/providers目录下写入自己的URL地址，这个操作就完成了服务的发布。
+
+服务消费者启动的时候，订阅/dubbo/{serviceName}/providers目录下的提供者URL地址， 并向/dubbo/{serviceName} /consumers目录下写入自己的URL地址。
+
+注意，所有向ZK上注册的地址都是临时节点，这样就能够保证服务提供者和消费者能够自动感应资源的变化。
+
+另外，Dubbo还有针对服务粒度的监控，方法是订阅/dubbo/{serviceName}目录下所有提供者和消费者的信息。
+
+* DUBBO
+
+DUBBO是一个分布式服务框架，致力于提供高性能和透明化的RPC远程服务调用方案，是阿里巴巴SOA服务化治理方案的核心框架，每天为2,000+个服务提供3,000,000,000+次访问量支持，并被广泛应用于阿里巴巴集团的各成员站点。
 
 

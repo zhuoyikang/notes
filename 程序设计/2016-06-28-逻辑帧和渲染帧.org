@@ -4,7 +4,7 @@
 
 | 平台    | 帧率 | 显卡 |
 | mac     |   30 | 无   |
-| windows |   30 | 430  |
+| windows |   60 | 430  |
 
 * 显示帧率的代码
 
@@ -45,3 +45,80 @@
 将此脚本挂到任何一个物体上即可。
 
 * 渲染帧和逻辑帧
+
+参考神文:http://www.cnblogs.com/kekec/p/3670389.html
+
+一次循环由获取用户输入、更新游戏状态、处理AI、播放音乐和绘制画面组成。
+
+这些行为可以分成两类：
+
+#+begin_src sh
+update_game(); // 更新游戏状态（逻辑帧），一般不耗时
+display_game(); // 更新显示（显示帧），耗时（场景越复杂越耗时）
+#+end_src
+
+
+几个概念
+
++ 游戏速度：每秒调用update_game的次数。
++ FPS：即帧率；每秒调用display_game的次数。
++ 可变显示FPS：即可变显示帧率，每秒调用display_game且显示画面有变化的次数。
+
+** 最简单的游戏循环
+
+#+begin_src c++
+bool game_is_running = true;
+while( game_is_running )
+{
+　　update_game();
+　　display_game();
+}
+#+end_src
+
+该循环主要的问题是忽略了时间，游戏会尽情的飞奔，能有多快就运行多快
+我们会看到在性能好的机器上，物体运动得更快一些
+
+** FPS依赖恒定的游戏速度
+
+#+begin_src cpp
+const int FRAMES_PER_SECOND = 25;
+const int SKIP_TICKS = 1000 / FRAMES_PER_SECOND;
+DWORD next_game_tick = GetTickCount(); // 返回当前的系统已经运行的毫秒数
+int sleep_time = 0;
+bool game_is_running = true;
+while( game_is_running )
+{
+　　update_game();
+　　display_game();
+　　next_game_tick += SKIP_TICKS;
+　　sleep_time = next_game_tick - GetTickCount();
+　　if( sleep_time >= 0 )
+    {
+　　    Sleep( sleep_time );
+　　}
+}
+#+end_src
+
+优点：重新播放游戏会显得简单（因为每帧时间间隔固定，只需要记录下每一帧游戏的状态，回放时按照25帧的速度播放即可）
+
+配置差的机器的表现：到某些复杂的游戏场景时，display_game绘制会耗费大量时间，影响游戏输入和AI的响应，游戏会变得很慢（卡）当场景变得简单时，游戏会加速运行，直到match到正常的步伐，然后稳定到25帧.
+
+牛逼的机器的表现：对于高速移动的物体，对视觉效果有一些影响（原来可以跑300帧，现在被强制只能运行25帧）；另外，由于调用了Sleep，会比较省电一些
+
+结论：FPS阈值定义得太高会使得配置差的机器机不堪重负，定义得太低则会使得高端硬件损失太多视觉效果
+
+* 逻辑帧稳定为每秒16帧
+看了上面的强悍博文，我只需要在update函数内部实现一个16fps的逻辑帧计算就行了。
+
+
+另外Unity提供了FixUpdate也可以用
+
+#+begin_src csharp
+void FixedUpdate() {
+    m_transform.position += _Move*_speed;
+}
+#+end_src
+
+
+
+
