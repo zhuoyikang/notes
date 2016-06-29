@@ -1,14 +1,91 @@
 learn you some docker
 
-* 镜像
+[[https://yeasy.gitbooks.io/docker_practice/content/][Docker —— 从入门到实践]]
+
+* 概念
+** 镜像
 
 + 获取镜像: docker pull ubuntu
 + 使用该镜像(创建一个容器): docker run -t -i ubuntu /bin/bash
 + 列出本地镜像：docker images
 
-修改镜像
+** 容器
+
+容器是从镜像创建的运行实例。它可以被启动、开始、停止、删除。每个容器都是相互隔离的、保证安全的平台。
+
+** 仓库
+
+仓库（Repository）是集中存放镜像文件的场所。有时候会把仓库和仓库注册服务器（Registry）混为一谈，并不严格区分。实际上，仓库注册服务器上往往存放着多个仓库，每个仓库中又包含了多个镜像，每个镜像有不同的标签（tag）。
+最大的公开仓库是 Docker Hub，存放了数量庞大的镜像供用户下载。
+国内的公开仓库包括 时速云 、网易云 等，可以提供大陆用户更稳定快速的访问。
+
+* 利用dockerfile来创建镜像
+
+生成一个sinatra镜像
 
 #+begin_src sh
+# sinatra/Dockerfile
+# This is a comment
+FROM ubuntu:14.04
+MAINTAINER Docker Newbee <newbee@docker.com>
+RUN apt-get -qq update
+RUN apt-get -qqy install ruby ruby-dev
+RUN gem install sinatra
+#+end_src
+
+Dockerfile 基本的语法是
+
++ 使用#来注释
++ FROM 指令告诉 Docker 使用哪个镜像作为基础
++ 接着是维护者的信息
++ RUN开头的指令会在创建中运行，比如安装一个软件包，在这里使用 apt-get 来安装了一些软件
++ 编写完成 Dockerfile 后可以使用 docker build 来生成镜像。
+
+编写完成 Dockerfile 后可以使用 docker build 来生成镜像。
+#+begin_src sh
+docker build sinatra  -t="ubuntu:sinatra"
+# 或者 在sinatra文件夹中执行: docker build -t="ubuntu:sinatra" .
+
+# sinatra个单独的文件夹
+# sinatra/Dockerfile
+
+Sending build context to Docker daemon 2.048 kB
+Step 1 : FROM ubuntu
+ ---> 12543ced0f6f
+Step 2 : MAINTAINER Docker Newbee <newbee@docker.com>
+ ---> Using cache
+ ---> 9d6bbdb374c9
+Step 3 : RUN apt-get -qq update
+ ---> Running in a2e05693a3d2
+
+#+end_src
+
+
+可以看到 build 进程在执行操作。它要做的第一件事情就是上传这个 Dockerfile 内容，因为所有的操作都要依据 Dockerfile 来进行。 然后，Dockfile 中的指令被一条一条的执行。每一步都创建了一个新的容器，在容器中执行指令并提交修改（就跟之前介绍过的 docker commit 一样）。当所有的指令都执行完毕之后，返回了最终的镜像 id。所有的中间步骤所产生的容器都被删除和清理了。
+*注意一个镜像不能超过 127 层+
+
+
+此外，还可以利用 ADD 命令复制本地文件到镜像；用 EXPOSE 命令来向外部开放端口；用 CMD 命令来描述容器启动后运行的程序等。例如
+
+#+begin_src sh
+# put my local web site in myApp folder to /var/www
+ADD myApp /var/www
+# expose httpd port
+EXPOSE 80
+# the command to run
+CMD ["/usr/sbin/apachectl", "-D", "FOREGROUND"]
+#+end_src
+
+* 镜像操作
+
+#+begin_src sh
+
+# 查看镜像
+docker images
+
+# 下载镜像
+docker pull ubuntu
+
 # 先使用下载的镜像启动容器
 docker run -t -i ubuntu /bin/bash
 
@@ -21,14 +98,79 @@ exit
 # 提交修改
 docker commit -m='A new image' --author='Aomine' c4b95023eada ubuntu:x1
 
-
-使用 docker images 来查看新创建的镜像。
-
 # 使用新的镜像
 docker run -t -i ubuntu:x1 /bin/bash
+
+# 用 docker tag 命令来修改镜像的标签。
+docker tag  d0f93f375f14  ubuntu:sinatra
+
+# 删除镜像
+docker rmi ubuntu:v1
+
+# 上传镜像
+docker push ouruser/sinatra
+
+# 清理所有未打过标签的本地镜像
+docker rmi $(docker images -q -f "dangling=true")
+
+#+end_src
+
+* 容器操作
+
+#+begin_src sh
+  # 启动
+  docker run ubuntu /bin/echo 'Hello world'
+
+  # 交互启动
+  # 其中，-t 选项让Docker分配一个伪终端（pseudo-tty）并绑定到容器的标准输入上， -i 则让容器的标准输入保持打开
+  docker run -t -i ubuntu /bin/bash
+
+
+  # 当利用 docker run 来创建容器时，Docker 在后台运行的标准操作包括：
+  # 检查本地是否存在指定的镜像，不存在就从公有仓库下载
+  # 利用镜像创建并启动一个容器
+  # 分配一个文件系统，并在只读的镜像层外面挂载一层可读写层
+  # 从宿主主机配置的网桥接口中桥接一个虚拟接口到容器中去
+  # 从地址池配置一个 ip 地址给容器
+  # 执行用户指定的应用程序
+  # 执行完毕后容器被终止
+
+
+  # 列出已经终止的容器
+  docker ps -a
+
+  CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS                      PORTS               NAMES
+  0d1c2c796540        ubuntu              "/bin/bash"              2 minutes ago       Exited (0) 2 minutes ago                        pensive_blackwell
+  96b30e9bc5ef        ubuntu              "/bin/echo 'Hello wor"   4 minutes ago       Exited (0) 4 minutes ago                        tiny_feynman
+  8c3ad9783ac1        9d6bbdb374c9        "/bin/sh -c 'apt-get "   8 hours ago         Exited (0) 19 minutes ago                       adoring_payne
+  b122b30b93db        61a4a97ba285        "/bin/bash"              8 hours ago         Exited (0) 8 hours ago                          sleepy_leakey
+  8c6f37c67d17        61a4a97ba285        "/bin/bash"              8 hours ago         Exited (0) 8 hours ago                          cranky_nobel
+  c4b95023eada        ubuntu              "/bin/bash"              8 hours ago         Exited (0) 8 hours ago                          compassionate_franklin
+  0ee7be0801c9        ubuntu              "/bin/sh -c 'while tr"   4 days ago          Exited (0) 4 days ago                           clever_albattani
+
+  # 根据容器ID启动已终止容器
+  docker start 96b30e9bc5ef
+
+  # 通过docker logs查看日志，可以看到没运行一次docker start，"Hello World"就会多输出一条.
+  docker logs 96b30e9bc5ef
+
+
+  # 使用-d参数后台运行
+
+  docker run -d ubuntu /bin/sh -c "while true; do echo hello world; sleep 1; done"
+  563f6a3efea0827cf01672af3fbd0ba03e3fac4dfafc278df530bd74c060712a
+
+  # 查看正在运行的容器
+  docker ps
+  CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS               NAMES
+  563f6a3efea0        ubuntu              "/bin/sh -c 'while tr"   59 seconds ago      Up 57 seconds                           distracted_mcnulty
+
+  # 终止容器
+  docker stop 563f6a3efea0827cf01672af3fbd0ba03e3fac4dfafc278df530bd74c060712a
+
+  # 重新启动容器
+  docker start 563f6a3efea0
 
 #+end_src
 
 
-* 容器
-* 仓库
