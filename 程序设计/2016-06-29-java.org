@@ -1,0 +1,15 @@
+类名和文件名必须一致->
+
+#+begin_src java
+
+import java.util.*;
+public class HelloWorld{
+public static void main(String[] args) {
+    System.out.println("HelloWorld");
+    }
+}
+
+#+end_src
+
+javac HelloWorld.java
+java HelloWorld

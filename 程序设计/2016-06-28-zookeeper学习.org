@@ -100,8 +100,8 @@ ZooKeeper以多种方式跟踪时间
 
 + zxid：每次修改ZooKeeper状态都会收到一个zxid形式的时间戳，也就是ZooKeeper事务ID。事务ID是ZooKeeper中所有修改总的次序。每个修改都有唯一的zxid，如果zxid1小于zxid2，那么zxid1在zxid2之前发生。
 版本号：对节点的每次修改将使得节点的版本号增加一。版本号有三种：version（znode数据修改的次数）、cversion（znode子节点修改的次数），以及aversion（znode的ACL修改次数）。
-+ tick：多服务器ZooKeeper中，服务器使用tick来定义状态上传、会话超时、节点间连接超时等事件的时序。tick仅被最小会话超时（2倍的tick时间)间接使用：如果客户端要求小于最小会话超时的时间，服务器将告知客户端，实际使用的是最小会话超时。
-+ 真实时间：除了在创建和修改znode时将时间戳放入stat结构体中之外，ZooKeeper不使用真实时间，或者说时钟时间。
+- tick：多服务器ZooKeeper中，服务器使用tick来定义状态上传、会话超时、节点间连接超时等事件的时序。tick仅被最小会话超时（2倍的tick时间)间接使用：如果客户端要求小于最小会话超时的时间，服务器将告知客户端，实际使用的是最小会话超时。
+- 真实时间：除了在创建和修改znode时将时间戳放入stat结构体中之外，ZooKeeper不使用真实时间，或者说时钟时间。
 
 
 get获得的参数的意思是->
@@ -129,7 +129,6 @@ ZooKeeper使用ACL控制对节点的访问。ACL的实现同Unix文件访问权�
 客户端连接到ZooKeeper，验证自身的时候，ZooKeeper将所有对应客户端的ID都关联到客户端连接上。客户端试图存取节点的时候，ZooKeeper会在节点的ACL中校验这些ID。ACL由(scheme:expression,perms)对组成。expression的格式是特定于scheme的。比如说，(ip:19.22.0.0/16,READ)给予任何IP地址以19.22开头的客户端以READ权限。
 
 * 编程
-
 ** zk驱动: https://github.com/huaban/erlzk
 erlzk is A Pure Erlang ZooKeeper Client (no C dependency).
 
@@ -222,6 +221,14 @@ watcher
 
 https://zookeeper.apache.org/doc/trunk/zookeeperProgrammers.html
 
+** 如何识别到注册的server挂掉
+
+它们的实现方式都是在 Zookeeper 上创建一个 EPHEMERAL 类型的目录节点，然后每个 Server 在它们创建目录节点的父目录节点上调用 getChildren(String path, boolean watch) 方法并设置 watch 为 true，由于是 EPHEMERAL 目录节点，当创建它的 Server 死去，这个目录节点也随之被删除，所以 Children 将会变化，这时 getChildren上的 Watch 将会被调用，所以其它 Server 就知道已经有某台 Server 死去了。新增 Server 也是同样的原理。
+
+#+begin_src erlang
+{ok, "/a"} = erlzk:create(Pid, "/a/x", ephemeral).
+#+end_src
+
 * 命名服务
 
 命名服务是指通过指定的名字来获取资源或者服务的地址，提供者的信息。利用Zookeeper很容易创建一个全局的路径，而这个路径就可以作为一个名字，它可以指向集群中的集群，提供的服务的地址，远程对象等。简单来说使用Zookeeper做命名服务就是用路径作为名字，路径上的数据就是其名字指向的实体。
@@ -236,8 +243,9 @@ https://zookeeper.apache.org/doc/trunk/zookeeperProgrammers.html
 
 另外，Dubbo还有针对服务粒度的监控，方法是订阅/dubbo/{serviceName}目录下所有提供者和消费者的信息。
 
-* DUBBO
 
-DUBBO是一个分布式服务框架，致力于提供高性能和透明化的RPC远程服务调用方案，是阿里巴巴SOA服务化治理方案的核心框架，每天为2,000+个服务提供3,000,000,000+次访问量支持，并被广泛应用于阿里巴巴集团的各成员站点。
+* dubbo
+
+dubbo是一个分布式服务框架，致力于提供高性能和透明化的RPC远程服务调用方案，是阿里巴巴SOA服务化治理方案的核心框架，每天为2,000+个服务提供3,000,000,000+次访问量支持，并被广泛应用于阿里巴巴集团的各成员站点。
 
 
