@@ -2,6 +2,7 @@
 + [[http://www.cnblogs.com/sharpxiajun/archive/2013/06/02/3113923.html][参考文章1 ]]
 + [[http://www.ibm.com/developerworks/cn/data/library/bd-zookeeper/][ZooKeeper 基础知识、部署和应用程序-IBM]]
 + [[https://www.zhihu.com/question/35139415][ZooKeeper & kazoo]]
++ [[https://www.nginx.com/blog/nginx-and-zookeeper-dynamic-load-balancing-and-deployments/][NGINX and Zookeeper, Dynamic Load Balancing and Deployments]]
 
 ** 统一命名服务
 
@@ -185,13 +186,13 @@ watcher
 
 #+begin_src erlang
   % set an exists watch
-  erlzk:exists(Pid, "/b", spawn(fun() ->
+  erlzk:exists(Pid, "/platform/filter/1", spawn(fun() ->
           receive
               % receive a watch event
               {Event, Path} ->
-                 io:format("event ~p path ~p", [Event, Path])
+              io:format("event ~p path ~p", [Event, Path])
           end
-      end)),
+          end)),
   % create a node trigger the watch
   {ok, "/a"} = erlzk:create(Pid, "/a").
 
