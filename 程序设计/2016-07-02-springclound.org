@@ -1,0 +1,38 @@
+* 微服务开发的12项要素
+
+spring cloud官方文档提到的服务开发的12项要素。
+
+I. Codebase
+从一个代码库部署到多个环境。
+II. Dependencies
+使用显式的声明隔离依赖，即模块单独运行，并可以显式管理依赖。
+III. Config
+在系统外部存储配置信息。
+IV. Backing Services
+把支持性服务看做是资源，支持性服务包括数据库、消息队列、缓冲服务器等。
+V. Build, release, run
+严格的划分编译、构建、运行阶段，每个阶段由工具进行管理。
+VI. Processes
+应用作为无状态执行。
+VII. Port binding
+经由端口绑定导出服务，优先选择 HTTP API 作为通用的集成框架。
+VIII. Concurrency
+并发性使用水平扩展实现，对于web就是水平扩展web应用实现。
+IX. Disposability
+服务可处置性，任何服务可以随意终止或启动。
+X. Dev/prod parity
+开发和生产环境保持高度一致，一键式部署。
+XI. Logs
+将日志看做是事件流来管理，所有参与的服务均使用该方式处理日志。
+XII. Admin processes
+管理任务作为一次性的过程运行（使用脚本管理服务启动和停止）。
+
+
+
+* 使用Spring Cloud和Docker构建微服务
+
+Configuration Service
+
+Discovery Service
+Circuit breakers
+Distributed sessions
