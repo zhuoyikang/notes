@@ -245,14 +245,18 @@ docker run -d --name db3 --volumes-from db1 training/postgres
 
 docker run -ti -v /data ubuntu /bin/bash 
 #+end_src
-* 常用容器操作
+* 实际操作
 
 ** nginx :https://hub.tenxcloud.com/repos/docker_library/nginx
 
 静态网页
 docker run --name sphinx-nginx -v /Users/zhuoyikang/source/sphinx_demo/output:/usr/share/nginx/html:ro -d  -p 8070:80 nginx
 
-** f
+** php:5.5-apache
+
+https://github.com/docker-library/php/blob/e37ca400ba0e1c34357bf06732bc77064e5a4941/5.5/apache/Dockerfile
+docker run --name sphinx-php -v /Users/zhuoyikang/source/sphinx_demo/output:/var/www/html:ro -d  -p 8071:80 php:5.5-apache
+
 
 
 

@@ -1,7 +1,6 @@
 # -*- mode: org; -*-
 #+HTML_HEAD: <link rel="stylesheet" type="text/css" href="http://www.pirilampo.org/styles/readtheorg/css/htmlize.css"/>
 #+HTML_HEAD: <link rel="stylesheet" type="text/css" href="http://www.pirilampo.org/styles/readtheorg/css/readtheorg.css"/>
-
 #+HTML_HEAD: <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
 #+HTML_HEAD: <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
 #+HTML_HEAD: <script type="text/javascript" src="http://www.pirilampo.org/styles/lib/js/jquery.stickytableheaders.js"></script>
@@ -124,7 +123,7 @@ Pivotal最近发布了Spring Cloud 1.0开放源码库，[[http://www.infoq.com/c
 + 云平台连接器（Cloud Connector）
 + 服务连接器（Service Connector
 
-特性:
+** 特性:
 
 它为基于JVM的云应用开发中的
 + 配置管理、
@@ -138,7 +137,7 @@ Pivotal最近发布了Spring Cloud 1.0开放源码库，[[http://www.infoq.com/c
 + 分布式会话和集群状态管理
 等操作提供了一种简单的开发方式
 
-Spring Cloud 1.0正式版所实现的主要改进内容包括 ->
+** Spring Cloud 1.0正式版所实现的主要改进内容包括 ->
 
 + Spring Cloud Config子项目支持使用Git配置客服务器
 + Spring Cloud Config子项目支持客户端的配置信息刷新、加密/解密配置、基于Spring应用的声明周期阶段配置
@@ -154,7 +153,12 @@ Spring Cloud 1.0正式版所实现的主要改进内容包括 ->
 + 对AWS服务的集成实现了对相关数据库、消息、EC2元数据的支持
 + 为AMQP总线定义了一套操作事件，如配置变化等
 + Groovy CLI实现了对上述多数功能的支持
+* 微服务架构入门
+** 微服务架构的优势与不足
+fwef
+
 * 各种链接
+
 ** spring clound
 
 + [[https://github.com/xuminwlt/j360-cloud-all][spring cloud独立功能介绍和demo 分布式配置服务器、客户端、服务发现、负载均衡、断路器Hytrix]]
@@ -164,7 +168,5 @@ Spring Cloud 1.0正式版所实现的主要改进内容包括 ->
 
 ** 微服务实战
 
++ [[http://microservices.io/][Microservice]]
 + [[http://dockone.io/article/394][微服务实战（一）：微服务架构的优势与不足]]
-
-
-

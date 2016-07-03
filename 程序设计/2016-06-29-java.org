@@ -1,15 +1,41 @@
+* hello world
+
 类名和文件名必须一致->
 
 #+begin_src java
-
-import java.util.*;
-public class HelloWorld{
-public static void main(String[] args) {
-    System.out.println("HelloWorld");
-    }
-}
-
+  import java.util.*;
+  public class HelloWorld{
+  public static void main(String[] args) {
+      System.out.println("HelloWorld");
+      }
+  }
 #+end_src
 
 javac HelloWorld.java
 java HelloWorld
+
+* Maven
+
++ [[http://www.oracle.com/technetwork/cn/community/java/apache-maven-getting-started-1-406235-zhs.html][Apache Maven 入门篇 ( 上 )]]
++ [[http://www.oracle.com/technetwork/cn/community/java/apache-maven-getting-started-2-405568-zhs.html][Apache Maven 入门篇 ( 下 )]]
++ [[http://www.jianshu.com/p/d3bfeaf92a9c][Maven入门摘要-简书]]
++ [[http://maven.apache.org/guides/getting-started/maven-in-five-minutes.html][Maven in 5 Minutes]]
+
+http://pan.baidu.com/s/1pJ6wrBt
+
+生成一个新项目
+
+#+begin_src sh
+mvn archetype:generate -DgroupId=com.mycompany.helloworld -DartifactId=helloworld -Dpackage=com.mycompany.helloworld -Dversion=1.0-SNAPSHOT
+mvn archetype:generate -DgroupId=com.mycompany.app -DartifactId=my-app -DarchetypeArtifactId=maven-archetype-quickstart -DinteractiveMode=false
+
+cd helloworld
+
+mvn package 
+
+java -cp target/helloworld-1.0-SNAPSHOT.jar com.mycompany.helloworld.App
+#+end_src
+
++ archetype:generate 目标会列出一系列的 archetype 让你选择。 
++ Archetype 可以理解成项目的模型。 Maven 为我们提供了很多种的项目模型，包括从简单的 Swing 到复杂的 Web 应用。我们选择默认的 maven-archetype-quickstart ，是编号 #106 ，如下图所示：
+

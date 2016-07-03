@@ -74,3 +74,173 @@ hello thrift --gen erl hello2.thrift
  为这个transport创建一个输入/输出协议
  基于输入/输出协议创建一个处理器（processor）
  等待进来的连接并且将它们交给处理器
+
+* thrift java
+
+http://www.cnblogs.com/johnc/archive/2011/06/19/2084508.html
+
+1. 编写一个thrift文件.
+
+#+begin_src text
+namespace java net.johnc.thrift
+service Test{ 
+ 
+ void ping(1: i32 length)
+ 
+}
+#+end_src
+
+2. 生成java代码
+
+#+begin_src sh
+thrift --gen java test.thrift
+#+end_src
+
+3. 使用maven生成项目
+
+#+begin_src sh
+mvn archetype:generate -DgroupId=net.johnc.thrift -DartifactId=thrift -Dpackage=net.johnc.thrift -DarchetypeArtifactId=maven-archetype-quickstart -Dversion=1.0-SNAPSHOT
+mvn package
+java -cp target/thrift-1.0-SNAPSHOT.jar net.johnc.thrift.App
+#+end_src
+
+4. 拷贝Test.java
+
+#+begin_src sh
+mv gen-java/net/johnc/thrift/Test.java   src/main/java/net/johnc/thrift
+#+end_src
+
+
+5. 加入thrift依赖，需要填写成对应的版本
+
+#+begin_src xml
+    <dependency>
+      <groupId>org.apache.thrift</groupId>
+      <artifactId>libthrift</artifactId>
+      <version>0.9.3</version>
+    </dependency>
+#+end_src
+
+6. 加入客服端和服务代码
+
+Server.java
+#+begin_src java
+package net.johnc.thrift;
+
+import net.johnc.thrift.Test.Processor;
+import org.apache.thrift.protocol.TBinaryProtocol;
+import org.apache.thrift.protocol.TBinaryProtocol.Factory;
+import org.apache.thrift.server.TServer;
+import org.apache.thrift.server.TThreadPoolServer;
+import org.apache.thrift.server.TThreadPoolServer.Args;
+import org.apache.thrift.transport.TServerSocket;
+import org.apache.thrift.transport.TTransportException;
+
+public class Server {
+    public void startServer() {
+        try {
+
+            TServerSocket serverTransport = new TServerSocket(1234);
+            Test.Processor process = new Processor(new TestImpl());
+
+            Factory portFactory = new TBinaryProtocol.Factory(true, true);
+
+            Args args = new Args(serverTransport);
+            args.processor(process);
+            args.protocolFactory(portFactory);
+
+            TServer server = new TThreadPoolServer(args);
+            server.serve();
+        } catch (TTransportException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void main(String[] args) {
+        Server server = new Server();
+        server.startServer();
+    }
+}
+
+#+end_src
+
+
+Client.java
+#+begin_src java
+package net.johnc.thrift;
+
+import org.apache.thrift.TException;
+import org.apache.thrift.protocol.TBinaryProtocol;
+import org.apache.thrift.protocol.TProtocol;
+import org.apache.thrift.transport.TSocket;
+import org.apache.thrift.transport.TTransport;
+import org.apache.thrift.transport.TTransportException;
+
+public class Client {
+
+    public void startClient() {
+        TTransport transport;
+        try {
+            transport = new TSocket("localhost", 1234);
+            TProtocol protocol = new TBinaryProtocol(transport);
+            Test.Client client = new Test.Client(protocol);
+            transport.open();
+            client.ping(2012);
+            transport.close();
+        } catch (TTransportException e) {
+            e.printStackTrace();
+        } catch (TException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void main(String[] args) {
+        Client client = new Client();
+        client.startClient();
+    }
+}
+
+#+end_src
+
+
+TestImpl.java
+#+begin_src java
+package net.johnc.thrift;
+
+import org.apache.thrift.TException;
+
+public class TestImpl implements Test.Iface {
+
+    public void ping(int length) throws TException {
+        System.out.println("calling ping ,length=" + length);
+    }
+
+}
+
+#+end_src
+
+
+
+7. 编译
+mvn package
+
+8. 运行
+
+#+begin_src sh
+# app 
+java -cp target/thrift-1.0-SNAPSHOT.jar net.johnc.thrift.App
+
+# 服务端
+java -cp target/thrift-1.0-SNAPSHOT.jar net.johnc.thrift.Server
+
+# 客户端
+java -cp target/thrift-1.0-SNAPSHOT.jar net.johnc.thrift.Client
+#+end_src
+
+
+
+javac  -cp /Users/zhuoyikang/source/thrift/thrift-0.9.3/lib/java/build -cp /Users/zhuoyikang/source/thrift/hello/  Server.java
+
+
+java -classpath "lib/libthrift-0.9.1.jar:lib/slf4j-log4j12-1.5.8.jar:lib/slf4j-api-1.5.8.jar:lib‌​/log4j-1.2.14.jar:lib/commons-logging-1.1.1.jar:bin" Server 
+java -classpath "bin:lib/libthrift-0.9.1.jar:lib/slf4j-log4j12-1.5.8.jar:lib/slf4j-api-1.5.8.jar:lib‌​/log4j-1.2.14.jar:lib/commons-logging-1.1.1.jar" Server 
