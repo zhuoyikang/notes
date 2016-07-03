@@ -119,6 +119,92 @@ Diamond中的数据是简单的key-value结构。应用方订阅数据则是基�
 
 API Gateway负责负载均衡、缓存、访问控制、API 计费监控等等任务，可以通过NGINX方便实现，后续文章将会介绍到API Gateway。
 
++ [[http://mp.weixin.qq.com/s?__biz=MjM5MDE0Mjc4MA==&mid=208452217&idx=1&sn=a5c5b6436010182a260b90af2cd783e2&scene=21][怎么用API网关构建微服务｜架构]]
++ [[https://github.com/Mashape/kong][Mashape开源API网关——Kong]]
++ [[https://github.com/gf-rd/blog/issues/11][Node 接入层 - 技术选型]]
+
+** API网关的作用
+
+| 功能         | 	API网关作用                                                                                     |
+| 安全         | 	在企业接入层作为第一个拦截器，建立用户标示前, 作为授权，认证，审计（AAA）的提供者或转发者       |
+| 调停和转换   | 	介导不同协议间，更换API 的payload（如 HTTP 头，HTTP 请求主体）为了不同的客户端API消费需求       |
+| 基础服务质量 | 	为API消费的客户端提供基础设施基本的功能如：分页，限制频率，缓存，分发保证，防火墙，等           |
+| 监控和报表   | 	通过监控APIs 和 注入元数据来报备如API 使用，健康度，等其他指标，来指导API实现服务级别协议(SLAs) |
+| 聚合         | 	通过动态调用和构建把各个底层业务的细粒度的微服务 API 组合成粗粒度混搭式APIs                     |
+| 虚拟化       | 	通过虚拟化API节点和作为API服务器节点实例的反向代理实现一个高可用，安全，可扩展的抽象层          |
+
+** kong
+
+https://getkong.org/docs/
+https://github.com/Mashape/kong/
+
+*** 介绍
+
+编程语言: Nginx + Openresty + Lua
+存储: Cassandra 分布式Nosql数据库 / Postgresql
+提供Rest API接口
+每个节点是无状态的也就是说可以动态扩容
+提供Authentication、Security、Traffic Control、Transformations的插件&很容易自定义插件
+可以根据自己的业务需求定制开发
+
+*** 启动kong
+
+1. Start your database -->
+
+#+begin_src sh
+docker run -d --name kong-database \
+              -p 9042:9042 \
+              cassandra:2.2
+#+end_src
+
+#+begin_src sh
+docker run -d --name kong-database \
+              -p 5432:5432 \
+              -e "POSTGRES_USER=kong" \
+              -e "POSTGRES_DB=kong" \
+              postgres:9.4
+#+end_src
+
+2. Start a Kong container and link it to your database container, configuring the DATABASE environment variable with either cassandra or postgres depending on which database you decided to use:
+
+#+begin_src sh
+docker run -d --name kong \
+              --link kong-database:kong-database \
+              -e "DATABASE=cassandra" \
+              -p 8000:8000 \
+              -p 8443:8443 \
+              -p 8001:8001 \
+              -p 7946:7946 \
+              -p 7946:7946/udp \
+              --security-opt seccomp:unconfined \
+              mashape/kong
+
+
+docker run -d --name kong \
+              --link kong-database:kong-database \
+              -e "DATABASE=postgres" \
+              -p 8000:8000 \
+              -p 8443:8443 \
+              -p 8001:8001 \
+              -p 7946:7946 \
+              -p 7946:7946/udp \
+              --security-opt seccomp:unconfined \
+              mashape/kong
+
+#+end_src
+
+3. Kong is running:
+
+#+begin_src sh
+curl http://127.0.0.1:8001
+#+end_src
+
+** tyk
+
+https://tyk.io/
+https://github.com/TykTechnologies/tyk
+https://www.mashape.com/
+
 * 集群群首选举和锁定
 * springClound专题
 
@@ -159,6 +245,7 @@ Pivotal最近发布了Spring Cloud 1.0开放源码库，[[http://www.infoq.com/c
 + Groovy CLI实现了对上述多数功能的支持
 
 * 微服务实战
+
 ** 微服务架构的优势与不足
 
 http://dockone.io/article/394
@@ -390,7 +477,6 @@ Event sourcing （事件源）通过使用根本不同的事件中心方式来�
 
 事件源方法也有不少缺点，因为采用不同或者不太熟悉的变成模式，使得重新学习不太容易；事件存储只支持主键查询业务实体，必须使用 Command Query Responsibility Segregation (CQRS) 来完成查询业务，因此，应用必须处理最终一致数据。
 
-
 ** 选择微服务部署策略
 
 http://dockone.io/article/1066
@@ -433,7 +519,7 @@ Lambda 函数 是无状态服务。一般通过激活AWS服务处理请求。例
 
 然而还是有不少限制。不需要用来部署长期服务，例如用来消费从第三方代理转发来的消息，请求必须在300秒内完成，服务必须是无状态，因为理论上AWS Lambda会为每个请求生成一个独立的实例；必须用某种支持的语言完成，服务必须启动很快，否则，会因为超时被停止。
 
-
+* [[http://2016.qconbeijing.com/presentation/2820][全球软件开发大会：服务化与微服务架构]] 
 * 各种链接
 
 ** spring clound
@@ -445,5 +531,12 @@ Lambda 函数 是无状态服务。一般通过激活AWS服务处理请求。例
 
 ** 微服务实战
 
-+ [[http://microservices.io/][Microservice]]
-+ [[http://dockone.io/article/394][微服务实战（一）：微服务架构的优势与不足]]
++ [[http://microservices.io/][Microservice]] 居然有官网
++ [[http://www.jianshu.com/p/546ef242b6a3][基于微服务的软件架构模式]] 很好的解释额微服务架构
++ http://martinfowler.com/articles/microservices.html : James Lewis & Martin Fowler关于微服务的介绍，发表于2014年
++ http://www.infoq.com/cn/news/2014/07/microservice-learning-resources ：infoq的郭蕾整理的微服务的资料,很多有价值的资料
++ http://yobriefca.se/blog/2013/04/28/micro-service-architecture/ : James Hughes 2013年的关于微服务架构的介绍
++ https://www.safaribooksonline.com/library/view/building-microservices/9781491950340/ ：Oreilly的关于微服务实践的电子书
++ http://microservices.io/patterns/microservices.html : 居然建立了关于微服务架构的网站
++ http://www.infoq.com/articles/microservices-intro#anch114964
++ http://www.infoq.com/cn/news/2015/04/single-app-micro-service：单体应用与微服务优缺点辨析
