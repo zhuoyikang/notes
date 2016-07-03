@@ -1,0 +1,622 @@
+#+SETUPFILE: ../css/level-1.orgcss
+#+TITLE: Flex&Bison读书笔记
+[[http://vdisk.weibo.com/s/aJZ-rjnROyN24][flex与bison 中文版 第二版 高清.pdf]]
+为了学习golang，学习了下flex和bison。  [[../golang/15-04-18_Golang源码阅读简明笔记.org]]
+
+* 第一个flex程序:wc
+
+  读入一个文件报告这个文件的行数，单词数，字符数。
+
+#+begin_src flex
+  %{
+  int chars = 0;
+  int works = 0;
+  int lines = 0;
+  %}
+
+  %%
+
+  [a-zA-z] {works++; chars += strlen(yytext);}
+  \n {chars++; lines++;}
+  . {chars++;}
+
+  %%
+
+  int main(int argc, char *argv[])
+  {
+      yylex();
+      printf("works %d chars %d lines %d", works, chars, lines);
+      return 0;
+  }
+
+#+end_src
+
+  编译这个文件
+#+begin_src makefile
+wc:
+        flex fb1-1.l
+        cc  -L/usr/local/opt/flex/lib lex.yy.c -lfl
+#+end_src
+
+常见问题
+
+** "premature EOF"
+
+ %{ ... %}写成了%{ }%了。
+
+** ld: library not found for -lfl
+
+   安装flex: brew install flex
+
+#+begin_verse
+
+   This formula is keg-only, which means it was not symlinked into /usr/local.
+
+Mac OS X already provides this software and installing another version in
+parallel can cause all kinds of trouble.
+
+Some formulae require a newer version of flex.
+
+Generally there are no consequences of this for you. If you build your
+own software and it requires this formula, you'll need to add to your
+build variables:
+
+    LDFLAGS:  -L/usr/local/opt/flex/lib
+    CPPFLAGS: -I/usr/local/opt/flex/include
+
+#+end_verse
+
+** 使用
+#+begin_verse
+./a.out
+fwef
+fwef
+wef
+we
+^D
+works 14 chars 19 lines 5%
+#+end_verse
+* flex正则表达式匹配规则
+
+1. 优先选择更长的匹配.
+2. 如果有两个以上的匹配，选择程序里首先出现的那个。
+* flex和bison合体:桌面计算器
+** flex简易版
+#+begin_src flex
+%%
+"+" {printf("PLUS\n");}
+"-" {printf("MINUS\n");}
+"*" {printf("TIMES\n");}
+"/" {printf("DIVIDE\n");}
+"|" {printf("ABS\n");}
+[0-9] {printf("NUMBERS %s\n",yytext);}
+\n {printf("NEWLINE\n");}
+[ \t] {}
+. {printf("Mystery charactor %s\n", yytext);}
+%%
+#+end_src
+** makefile
+
+#+begin_src makefile
+calculator:
+        flex fb1-3.l
+        cc  -L/usr/local/opt/flex/lib lex.yy.c -lfl
+#+end_src
+
+** 使用
+
+#+begin_verse
+ ./a.out
+23 + 23
+NUMBERS 2
+NUMBERS 3
+PLUS
+NUMBERS 2
+NUMBERS 3
+NEWLINE
+#+end_verse
+** flex复杂版
+
+#+begin_src flex
+%{
+    enum yytokentype{
+        NUMBER = 258,
+        ADD = 259,
+        SUB = 260,
+        MUL = 261,
+        DIV = 262,
+        ABS = 263,
+        EOL = 264
+    };
+    int yyval;
+%}
+
+%%
+"+" { return ADD;}
+"-" { return SUB;}
+"*" { return MUL;}
+"/" { return DIV;}
+"|" { return ABS;}
+[0-9] { yyval = atoi(yytext); return NUMBER; }
+\n {printf("NEWLINE\n");}
+[ \t] {}
+. {printf("Mystery charactor %s\n", yytext);}
+%%
+
+int main(int argc, char *argv[])
+{
+    int tok;
+    while((tok=yylex())) {
+        printf("%d", tok);
+        if(tok == NUMBER) {
+            printf(" = %d\n", yyval);
+        }else{
+            printf("\n");
+        }
+    }
+    printf("over\n");
+    return 0;
+}
+#+end_src
+
+** 使用
+#+begin_verse
+➜  flex_and_bison git:(master) ✗ ./a.out
+3 + 23
+258 = 3
+259
+258 = 2
+258 = 3
+NEWLINE
+#+end_verse
+
+** 来点趣味
+
+   在1975年，Mike Lesk和暑期实习生Eric Schmidt编写了lex，一个词法分析器生成程序，大部分编程工作由Schmidt完成。他们发现lex可以作为一个独立的工具，也可以作为yacc的协同程序。lex因此变得十分流行，尽管它运行起来有点慢并且有很多错误。
+
+   Schmidt -> google前CEO.... 这程序员转岗后混的不错。
+** BNF and CFG
+
+   CFG：上下文无关文法
+   BNF：描述BNF的一种规范，贝格拉姆范式.
+
+** 安装bison
+
+#+begin_verse
+brew install bison
+Generally there are no consequences of this for you. If you build your
+own software and it requires this formula, you'll need to add to your
+build variables:
+
+    LDFLAGS:  -L/usr/local/opt/bison/lib
+#+end_verse
+
+** yacc计算器完整版.
+
+#+begin_src flex
+%{
+#include "fb1-4.tab.h"
+%}
+
+%%
+"+" { return ADD;}
+"-" { return SUB;}
+"*" { return MUL;}
+"/" { return DIV;}
+"|" { return ABS;}
+[0-9]+ { yylval = atoi(yytext); return NUMBER; }
+\n { return EOL;}
+[ \t] {}
+. {printf("Mystery charactor %s\n", yytext);}
+
+%%
+
+#+end_src
+
+#+begin_src bison
+%{
+#include <stdio.h>
+int yyerror(char *s);
+int yylex (void);
+%}
+
+%token NUMBER
+%token ADD SUB MUL DIV ABS
+%token EOL
+
+%%
+
+calclist:       /*空规则*/
+|       calclist exp EOL {printf("= %d\n", $2);}
+;
+
+exp:            factor {$$ =  $1 ; }
+|       exp ADD factor {$$ = $1 + $3;}
+|       exp SUB factor {$$ = $1 - $3;}
+;
+
+factor:          term  {$$ = $1 ; }
+|       factor MUL term {$$ = $1 * $3;}
+|       factor DIV term {$$ = $1 / $3;}
+;
+
+term:           NUMBER { $$ =  $1 ; }
+|       ABS term { $$ =  $2 >=0 ? $2 : -$2; }
+;
+
+%%
+int main(int argc, char *argv[])
+{
+    yyparse();
+    return 0;
+}
+
+
+int yyerror(char *s)
+{
+    fprintf(stderr, "error: %s\n",s);
+    return 0;
+}
+
+#+end_src
+
+#+begin_src makefile
+cal2:
+        bison -d fb1-4.y
+        flex fb1-4.l
+        cc   -L/usr/local/opt/flex/lib -o $@ fb1-4.tab.c  lex.yy.c  -lfl
+
+#+end_src
+* 使用flex:就不看了。
+* 使用Bison
+  Bison使用两种分析方法:
+
+  1. LALR(1):向左向右向前查看一个记号。
+  2. GLR:通用的自左向右
+
+  LALR不如GLR强大，但是更快更易用。
+
+** LALR无法处理的语法
+
+   1. 不能处理有歧义的语法.
+   2. 不能处理需要向前查看多个记号才能确定是否匹配的语法.
+
+*** 需要查看多个记号才能匹配的语法。
+
+#+begin_src bison
+phrase: cart_animal AND CART
+| work_animal AND PLOW |
+
+cart_animal: HORSE | GOAT
+work_animal: HORSE | OX
+#+end_src
+
+   这个语法并没有歧义都是需要向前查看两个符号。比如 HOURSE AND CART， 在看到CART之前，bison无法区别HORSE是一个cart_animal还是work_animal.
+
+修改规则如下，就只用向前看一个token了。
+
+#+begin_src bison
+phrase: cart_animal  CART
+| work_animal PLOW |
+
+cart_animal: HORSE | GOAT
+work_animal: HORSE | OX
+#+end_src
+** bison语法分析器
+
+   包含3部分.
+
+   1.定义部分:处理语法分析器的控制信息，建立分析器操作所需要的执行环境。
+   2.语法分析器规则定义部分。
+   3.C代码.
+* 完整的语法分析树计算器
+
+** flex
+  #+begin_src flex
+%option noyywrap nodefault yylineno
+
+%{
+#include "fb3-1.h"
+#include "fb3-1.tab.h"
+%}
+
+/* 浮点数指数部分 */
+EXP ([Ee][-+]?[0-9]+)
+
+%%
+
+"+" |
+"-" |
+"*" |
+"/" |
+"|" |
+"(" |
+")" {
+return yytext[0];
+}
+
+
+[0-9]+"."[0-9]*{EXP}? |
+"."?[0-9]+{EXP}? {
+yylval.d = atof(yytext);
+return NUMBER;
+}
+
+
+\n {return EOL;}
+
+"//".*
+[ \t] { /*ignore*/ }
+
+. { yyerror("Mystery charactor %c\n", *yytext);}
+
+  #+end_src
+
+** yacc
+
+#+begin_src bison
+%{
+#include <stdio.h>
+#include <stdlib.h>
+#include "fb3-1.h"
+
+%}
+
+%union {
+    struct ast *a;
+    double d;
+}
+
+%token  <d>             NUMBER
+%token                  EOL
+%type   <a>             exp factor term
+
+
+%%
+
+calclist:       /*空规则*/
+| calclist exp EOL {
+    printf("= %4.4g\n", eval($2));
+    treefree($2);
+    printf("> ");
+ }
+| calclist EOL { printf ("> "); }
+;
+
+exp:            factor { $$ =  $1; }
+|       exp '+' factor { $$ = newast('+', $1, $3); }
+|       exp '-' factor { $$ = newast('-', $1, $3); }
+;
+
+factor:          term  { $$ = $1; }
+|       factor '*' term { $$ = newast('*', $1, $3); }
+|       factor '/' term { $$ = newast('-', $1, $3); }
+;
+
+term:           NUMBER { $$ =  newnum($1); }
+| '|'  term { $$ = newast('|', $2, NULL); }
+| '('  exp ')' { $$ = $2; }
+| '-'  term { $$ = newast('M', $2, NULL); }
+;
+
+%%
+
+
+int main()
+{
+    printf("> ");
+    return yyparse();
+}
+
+#+end_src
+
+
+** makefile
+
+#+begin_src makefile
+
+cal3: fb3-1.l fb3-1.y fb3-1.c
+        flex fb3-1.l
+        bison -d fb3-1.y
+        cc  -L/usr/local/opt/flex/lib -o $@ fb3-1.tab.c  lex.yy.c  fb3-1_2.c    -lfl
+
+#+end_src
+
+** fb3-1.h
+
+#+begin_src c
+extern int yylineno;
+
+int yylex (void);
+void yyerror(char *s,...);
+
+/*抽象语法树中的节点*/
+struct ast {
+    int nodetype;
+    struct ast *l;
+    struct ast *r;
+};
+
+
+struct numval {
+    int nodetype;
+    double number;
+};
+
+/*构造抽象语法树*/
+
+struct ast *newast(int nodetype, struct ast *l, struct ast *r);
+struct ast *newnum(double d);
+
+/*计算抽象语法树*/
+double eval(struct ast *);
+
+/*删除和释放抽象语法树*/
+void treefree(struct ast *);
+
+#+end_src
+
+
+** fb3-1-2.c
+
+#+begin_src c
+# include <stdio.h>
+# include <stdlib.h>
+# include <stdarg.h>
+# include "fb3-1.h"
+
+struct ast *
+newast(int nodetype, struct ast *l, struct ast *r)
+{
+    struct ast *a = malloc(sizeof(struct ast));
+    if(!a) {
+        yyerror("out of space");
+        exit(0);
+    }
+    a->nodetype = nodetype; a->l = l;
+    a->r = r;
+    return a;
+}
+struct ast * newnum(double d)
+{
+    struct numval *a = malloc(sizeof(struct numval));
+
+    if(!a) {
+        yyerror("out of space");
+        exit(0);
+    }
+    a->nodetype = 'K'; a->number = d;
+    return (struct ast *)a;
+}
+
+double
+eval(struct ast *a)
+{
+    double v;
+    switch(a->nodetype) {
+    case 'K': v = ((struct numval *)a)->number; break;
+    case '+': v = eval(a->l) + eval(a->r); break;
+    case '-': v = eval(a->l) - eval(a->r); break;
+    case '*': v = eval(a->l) * eval(a->r); break;
+    case '/': v = eval(a->l) / eval(a->r); break;
+    case '|': v = eval(a->l);
+        if(v < 0) v = -v; break; case 'M': v = -eval(a->l); break;
+    default:
+        printf("internal error: bad node %c\n", a->nodetype); }
+    return v;
+}
+
+void
+treefree(struct ast *a)
+{
+    switch(a->nodetype) {
+        /* two subtrees */ case '+':
+    case '-':
+    case '*':
+    case '/': treefree(a->r);
+        /* one subtree */ case '|':
+    case 'M':
+        treefree(a->l);
+
+        /* no subtree */ case 'K':
+        free(a); break;
+    default: printf("internal error: free bad node %c\n", a->nodetype);
+    }
+}
+
+
+void
+yyerror(char *s, ...)
+{
+    va_list ap; va_start(ap, s);
+    fprintf(stderr, "%d: error: ", yylineno); vfprintf(stderr, s, ap);
+    fprintf(stderr, "\n");
+}
+
+#+end_src
+* 移近规约冲突和操作符优先级
+
+  2义性文法就会有移近规约冲突.
+
+  #+begin_src bison
+%left '+' '-'
+%left '*' '/'
+%nonassoc '|' UMINUS
+%type <a> exp
+
+
+exp : exp '+' exp { $$ = newast('+', $1, $1) }
+|  exp '-' exp { $$ = newast('-', $1, $1) }
+|  exp '*' exp { $$ = newast('*', $1, $1) }
+|  exp '/' exp { $$ = newast('/', $1, $1) }
+|  '|' exp {$$ = $2 ; }
+|  '(' exp ')' {$$ = $2 ; }
+|  '-' exp %prec UMINUS {  $$ =  newast('M', NULL, $2); }
+| NUMBER { $$ = newnum($1);}
+
+  #+end_src
+
+
+1. %left, %right, nonassoc的出现顺序决定了由低导高的优先级顺序。
+2. %left 说明是左结合的。
+3. '|' 和 UMINUS 没有结合性，但是有更高优先级。
+4. %prec 让bison 把UMINUS的优先级赋予这个规则。
+
+
+最好时修改语法来解决冲突，下面两种情况可以考虑使用优先级规则来搞定:
+
+1. 表达式语法.
+2. dangling else冲突。
+* 更高级的计算器
+** yacc
+#+begin_src bison
+%{
+#include <stdio.h>
+#include <stdlib.h>
+#include "fb3-2.h"
+%}
+
+%union {
+    struct ast*a;
+    double d;
+    struct symbol *s;   /*指定符号*/
+    struct symlist *sl;
+    int fn; /*指定函数*/
+}
+
+
+/*声明记号*/
+
+%token  <d>             NUMBER
+%token  <s>             NAME
+%token  <fn>            FUNC
+%token EOL
+%token IF THEN ELSE WHILE DO LET
+
+%nonassoc<fn> CMP
+%right                  '='
+%left                   '+' '-'
+%left                   '*' '/'
+%nonassoc               '|' UMINUS
+
+
+%type   <a> exp stmt list explist
+%type   <sl> symlist
+%start calclist
+
+
+%%
+stmt:           IF exp THEN list { $$=newflow('I', $2, $4, NULL); }
+        |       IF exp THEN list ELSE list { $$=newflow('I', $2, $4, $6); }
+        |       WHILE exp DO list { $$=newflow('W', $2, $4, NULL ); }
+        |       exp
+        ;
+
+list:           {$$=NULL;}
+        |       stmt ';' list { if($3==NULL){ $$=$1 } else { $$=newast('L', #1, $3)} }
+        ;
+#+end_src
+
+lists的定义是右递归的，也就是stmt ; list 而不是 list stmt; 对于语言识别没有任何的差异，但是更容易构建一个从头到尾而不是相反方向的语句链条，每次stmt ; list被规约时，它创建一个链接来把当前语句加在当前链表的首部。如果是 list stmt; 语句被添加到链表的尾部，这就要求我们使用一个更复杂的循环链表或者反转整个链表。
+
+使用右递归而不是左递归的缺点在于它把所有需要被规约的语句放在词法分析器的堆栈里，直到链表的尾部才规约;而左递归在分析输入时每次遇到语句就会立刻添加到链表中；像目前这种情况，链表只有几条语句，不会有什么问题，但是那种链表里有上千条语句的语言里，最好使用左递归然后翻转的方式来创建链表，这样可以避免堆栈溢出。有些程序员也发现左递归更容易调试，因为他会倾向于在每条语句后产生输出，而不是最后一次性的处理所有语句。

@@ -1,0 +1,18 @@
+#+SETUPFILE: ../css/level-1.orgcss
+#+TITLE: Sort:学习笔记
+
+* 一些链接
+[[http://blog.csdn.net/monkeyduck/article/details/10097829][Linux Shell sort排序常用命令非常详细]]
+
+* 参数解释
+
+* -t:指定分割符号 -k:指定排序列
+
+#+begin_verse facebook.txt
+banana:30:5.5
+apple:10:2.5
+pear:90:2.3
+orange:20:3.4
+#+end_verse
+
+sort -n -k 2 -t : facebook.txt

@@ -1,0 +1,96 @@
+#+SETUPFILE: ../css/level-1.orgcss
+#+TITLE: Mnesia
+
+强制建立连接，是本node加入到NodeName所维护的mnesia集群。
+mnesia:change_config(extra_db_nodes, [NodeName]).
+
+mnesia:change_config(extra_db_nodes, ['master_1@0.0.0.0']).
+mnesia:change_table_copy_type(schema, 'master_1@0.0.0.0', disc_copies).
+
+mnesia:del_table_copy(schema, node@host.domain).
+
+* 性能对比
+
+#+begin_src erlang
+-module(m).
+
+-compile(export_all).
+
+-record(r_test, {id, name}).
+
+start(N) ->
+  timer:tc(m,dirty,[N]).
+
+start2(X) ->
+  timer:tc(m,t_w1,[X]).
+
+init() ->
+  case mnesia:create_schema([node()]) of
+    ok ->
+      ok;
+    _ ->
+      mnesia:delete_schema([node()]),
+      mnesia:create_schema([node()])
+  end,
+  mnesia:start(),
+
+  case mnesia:create_table(r_test, [{attributes, record_info(fields, r_test)},
+                                    {record_name, r_test}
+                                    %%,{disc_copies, [node()]}
+                                   ]) of
+    {atomic, ok} ->
+      ok;
+    _Any1 ->
+      mnesia:delete_table(r_test),
+      mnesia:create_table(r_test, [{attributes, record_info(fields, r_test)},
+                                   {record_name, r_test}
+                                   %%,{disc_copies, [node()]}
+                                  ]
+                         )
+  end.
+
+
+t_w1(X) ->
+  mnesia:transaction(fun() -> t_write(X) end).
+
+t_write(0) ->
+  ok;
+t_write(N) ->
+  Name = lists:append(["name_", N]),
+  R = #r_test{id=N, name=Name},
+  mnesia:write(R),
+  t_write(N-1).
+
+
+dirty(0) ->
+  ok;
+dirty(Num) ->
+  Name = lists:append(["name_", Num]),
+  R = #r_test{id=Num, name=Name},
+  mnesia:dirty_write(R),
+  dirty(Num-1).
+
+#+end_src
+
+单机执行:
+
+-> dirty
+(x@0.0.0.0)3> m:start(10000).
+{67247,ok}
+
+-> 事务
+(x@0.0.0.0)4> m:start2(10000).
+{194096,{atomic,ok}}
+
+* Remote执行
+
+(y@0.0.0.0)5>  m:start(10000).
+{1451137,ok}
+(y@0.0.0.0)6>  m:start2(10000).
+{1610815,{atomic,ok}}
+
+
+|        |   dirty |  normal |
+| local  |   67247 |  194096 |
+| remote | 1451137 | 1610815 |
+| rate   |   21.57 |   8.299 |

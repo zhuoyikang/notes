@@ -1,0 +1,291 @@
+#+SETUPFILE: ../css/level-1.orgcss
+#+TITLE: Mongodb 学习
+
+* 链接
+
+[[http://www.lanceyan.com/tech/mongodb/mongodb_repset1.html][比较详细的介绍了副本集]]
+[[http://blog.csdn.net/zzq900503/article/details/8685893][Mongodb的副本集+分片部署]]
+
+* cmd
+** 副本集
+
+mongod --dbpath ./db1  --port 27020
+
+mongod --dbpath ./db1  --port 27020  --replSet repset
+mongod --dbpath ./db2  --port 27021  --replSet repset
+mongod --dbpath ./db3  --port 27022  --replSet repset
+
+
+mongo 127.0.0.1:27020
+mongo 127.0.0.1:27021
+mongo 127.0.0.1:27022
+
+#+begin_src js
+
+config = { _id:"repset", members:[
+{_id:0,host:"127.0.0.1:27020"},
+{_id:1,host:"127.0.0.1:27021"},
+{_id:2,host:"127.0.0.1:27022"}]
+}
+
+rs.initiate(config);
+rs.status();
+
+db.getMongo().setSlaveOk();  -> 这个东东要在从上执行.
+
+use test;
+db.testdb.insert({"test1":"testval1"})
+db.testdb.find()
+
+
+#+end_src
+
+** 副本集+分片
+
+tail -f r*/log/*.log
+
+ps -ef |grep mongod | awk '{print $2}'  | xargs kill
+ps -ef |grep mongod
+
+mongo --port 18010
+
+
+#+begin_src js
+
+config = { _id:"replset1", members:[
+{_id:0,host:"127.0.0.1:18010"},
+{_id:1,host:"127.0.0.1:18011"},
+{_id:2,host:"127.0.0.1:18012"}]
+};
+
+config = { _id:"replset2", members:[
+{_id:0,host:"127.0.0.1:28010"},
+{_id:1,host:"127.0.0.1:28011"},
+{_id:2,host:"127.0.0.1:28012"}]
+};
+
+config = { _id:"replset3", members:[
+{_id:0,host:"127.0.0.1:38010"},
+{_id:1,host:"127.0.0.1:38011"},
+{_id:2,host:"127.0.0.1:38012"}]
+};
+rs.initiate(config);
+
+rs.status();
+db.getMongo().setSlaveOk();
+
+use admin
+db.runCommand({addshard:"replset1/127.0.0.1:18010,127.0.0.1:18011,127.0.0.1:18012",allowLocal:true})
+db.runCommand({addshard:"replset2/127.0.0.1:28010,127.0.0.1:28011,127.0.0.1:28012",allowLocal:true})
+db.runCommand({addshard:"replset3/127.0.0.1:38010,127.0.0.1:38011,127.0.0.1:38012",allowLocal:true})
+
+db.runCommand({enablesharding:"mytest"})
+db.runCommand({shardcollection:"mytest.student",key:{_id:1}})
+
+use mytest
+
+for(var i=1; i<=6000; i++) db.student.insert({age:i,name:"mary",addr:"guangzhou",country:"China"})
+
+#+end_src js
+
+* mongo-erlang
+
+#+begin_src js
+
+application:start (bson).
+application:start (crypto).
+application:start (mongodb).
+Db = <<"mytest">>.
+Table = <<"student">>.
+Database = <<"mytest">>.
+{ok, PidMaster} = mongo:connect([{database, Db}]).
+{ok, PidSlave1} = mongo:connect([{database, Db}]).
+
+
+mongo:find_one(PidMaster, Table, {<<"name">>, <<"Yankees6">> }).
+mongo:find_one(PidSlave1, Table, {<<"name">>, <<"Yankees3">> }).
+
+mongo:insert(PidMaster, Table, [{<<"name">>, <<"Yankees6">>}]).
+mongo:insert(PidSlave1, Table, [{<<"name">>, <<"Yankees3">>}]).
+
+erl -pa ebin  deps/*/ebin/
+
+./rel/agent_node/bin/agent_node foreground
+./rel/player_node/bin/player_node foreground
+./rel/pvp_node/bin/pvp_node foreground
+
+application:start(bson).
+application:start(crypto).
+application:start(mongodb).
+application:start(mongodb_server).
+
+
+#+end_src
+* cmd2
+
+查看分片信息:
+db.printShardingStatus()
+
+http://hsto.org/getpro/habr/post_images/829/d6d/c86/829d6dc8666a0904d9f642f5f28f0377.jpg
+
+* MongoDb的ObjectID规则?
+* 查看数据库和表大小
+
+mongodb查看数据库和表的方法比较简单，在为这里推荐使用stats的方法，直观并且详细。
+
+查看数据库:db.stats();
+查看数据库表: db.model_map.stats();
+
+* Ubuntu安装mongodb
+
+标准文档
+https://docs.mongodb.org/manual/tutorial/install-mongodb-on-ubuntu/
+
+
+1. sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv EA312927
+2. echo "deb http://repo.mongodb.org/apt/ubuntu trusty/mongodb-org/3.2 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.2.list
+3. sudo apt-get update
+4. sudo apt-get install -y mongodb-org
+
+sudo service mongod start
+sudo service mongod stop
+sudo service mongod restart
+
+/var/log/mongodb/mongod.log
+* MongoGridGs
+
+mongofiles -d gridfs put song.mp3
+
+* Mongo远程访问
+* 数据的导出和恢复
+http://blog.51yip.com/nosql/1573.html
+
+
+mongodb 备份 还原 导出 导入
+张映 发表于 2013-12-03
+分类目录： nosql
+标签：mongodb, 备份, 导入, 导出, 还原
+
+mongodb数据备份和还原主要分为二种，一种是针对于库的mongodump和mongorestore，一种是针对库中表的mongoexport和mongoimport。
+
+** mongodump备份数据库
+
+1，常用命令格
+mongodump -h IP --port 端口 -u 用户名 -p 密码 -d 数据库 -o 文件存在路径  
+如果没有用户谁，可以去掉-u和-p。
+如果导出本机的数据库，可以去掉-h。
+如果是默认端口，可以去掉--port。
+如果想导出所有数据库，可以去掉-d。
+
+2,导出所有数据库
+[root@localhost mongodb]# mongodump -h 127.0.0.1 -o /home/zhangy/mongodb/  
+connected to: 127.0.0.1  
+Tue Dec  3 06:15:55.448 all dbs  
+Tue Dec  3 06:15:55.449 DATABASE: test     to     /home/zhangy/mongodb/test  
+Tue Dec  3 06:15:55.449     test.system.indexes to /home/zhangy/mongodb/test/system.indexes.bson  
+Tue Dec  3 06:15:55.450          1 objects  
+Tue Dec  3 06:15:55.450     test.posts to /home/zhangy/mongodb/test/posts.bson  
+Tue Dec  3 06:15:55.480          0 objects  
+  
+
+3,导出指定数据库
+查看复制打印?
+[root@localhost mongodb]# mongodump -h 192.168.1.108 -d tank -o /home/zhangy/mongodb/  
+connected to: 192.168.1.108  
+Tue Dec  3 06:11:41.618 DATABASE: tank     to     /home/zhangy/mongodb/tank  
+Tue Dec  3 06:11:41.623     tank.system.indexes to /home/zhangy/mongodb/tank/system.indexes.bson  
+Tue Dec  3 06:11:41.623          2 objects  
+Tue Dec  3 06:11:41.623     tank.contact to /home/zhangy/mongodb/tank/contact.bson  
+Tue Dec  3 06:11:41.669          2 objects  
+Tue Dec  3 06:11:41.670     Metadata for tank.contact to /home/zhangy/mongodb/tank/contact.metadata.json  
+Tue Dec  3 06:11:41.670     tank.users to /home/zhangy/mongodb/tank/users.bson  
+Tue Dec  3 06:11:41.685          2 objects  
+Tue Dec  3 06:11:41.685     Metadata for tank.users to /home/zhangy/mongodb/tank/users.metadata.json  
+
+** mongorestore还原数据库
+
+1,常用命令格式
+mongorestore -h IP --port 端口 -u 用户名 -p 密码 -d 数据库 --drop 文件存在路径  
+
+--drop的意思是，先删除所有的记录，然后恢复。
+
+2,恢复所有数据库到mongodb中
+[root@localhost mongodb]# mongorestore /home/zhangy/mongodb/   #这里的路径是所有库的备份路径  
+
+3,还原指定的数据库
+[root@localhost mongodb]# mongorestore -d tank /home/zhangy/mongodb/tank/    #tank这个数据库的备份路径  
+  
+[root@localhost mongodb]# mongorestore -d tank_new  /home/zhangy/mongodb/tank/    #将tank还有tank_new数据库中  
+这二个命令，可以实现数据库的备份与还原，文件格式是json和bson的。无法指写到表备份或者还原。
+
+
+** mongoexport导出表，或者表中部分字段
+
+1,常用命令格式
+mongoexport -h IP --port 端口 -u 用户名 -p 密码 -d 数据库 -c 表名 -f 字段 -q 条件导出 --csv -o 文件名  
+上面的参数好理解，重点说一下：
+-f    导出指字段，以字号分割，-f name,email,age导出name,email,age这三个字段
+-q    可以根查询条件导出，-q '{ "uid" : "100" }' 导出uid为100的数据
+--csv 表示导出的文件格式为csv的，这个比较有用，因为大部分的关系型数据库都是支持csv，在这里有共同点
+
+2,导出整张表
+[root@localhost mongodb]# mongoexport -d tank -c users -o /home/zhangy/mongodb/tank/users.dat  
+connected to: 127.0.0.1  
+exported 4 records  
+
+3,导出表中部分字段
+[root@localhost mongodb]# mongoexport -d tank -c users --csv -f uid,name,sex -o tank/users.csv  
+connected to: 127.0.0.1  
+exported 4 records  
+
+4,根据条件敢出数据
+查看复制打印?
+[root@localhost mongodb]# mongoexport -d tank -c users -q '{uid:{$gt:1}}' -o tank/users.json  
+connected to: 127.0.0.1  
+exported 3 records  
+
+** mongoimport导入表，或者表中部分字段
+
+1,常用命令格式
+1.1,还原整表导出的非csv文件
+mongoimport -h IP --port 端口 -u 用户名 -p 密码 -d 数据库 -c 表名 --upsert --drop 文件名  
+重点说一下--upsert，其他参数上面的命令已有提到，--upsert 插入或者更新现有数据
+
+1.2,还原部分字段的导出文件
+mongoimport -h IP --port 端口 -u 用户名 -p 密码 -d 数据库 -c 表名 --upsertFields 字段 --drop 文件名  
+--upsertFields根--upsert一样
+
+1.3,还原导出的csv文件
+mongoimport -h IP --port 端口 -u 用户名 -p 密码 -d 数据库 -c 表名 --type 类型 --headerline --upsert --drop 文件名  
+上面三种情况，还可以有其他排列组合的。
+
+2,还原导出的表数据
+[root@localhost mongodb]# mongoimport -d tank -c users --upsert tank/users.dat  
+connected to: 127.0.0.1  
+Tue Dec  3 08:26:52.852 imported 4 objects  
+
+3,部分字段的表数据导入
+[root@localhost mongodb]# mongoimport -d tank -c users  --upsertFields uid,name,sex  tank/users.dat  
+connected to: 127.0.0.1  
+Tue Dec  3 08:31:15.179 imported 4 objects  
+
+4,还原csv文件
+[root@localhost mongodb]# mongoimport -d tank -c users --type csv --headerline --file tank/users.csv  
+connected to: 127.0.0.1  
+Tue Dec  3 08:37:21.961 imported 4 objects  
+总体感觉，mongodb的备份与还原，还是挺强大的，虽然有点麻烦。
+* 检查当前.exe所需要的运行时库
+
+mono --runtime=
+
+That option is to control the CLR runtime:
+
+CLR version .NET version
+1.0         1.0
+1.1         1.1
+2.0         2.0, 3.0, 3.5
+4           4, 4.5, 4.6
+
+ikdasm protogen.exe | head -n 2
+
+// Metadata version: v2.0.50727

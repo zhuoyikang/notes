@@ -1,0 +1,40 @@
+#+begin_src sh
+find -name "*.[(cs)(lua)]" -exec etags -a {} ;
+
+find . -type f \( !-iname "*.css" ! -iname "*.png" ! -iname "*.jpg" ! -iname "*.js" ! -iname "*.html" ! -iname "*.htm" \)
+
+find . -type f \( -iname "*.cs"  -iname "*.lua" \)
+
+find . -type f \( -iname "*.lua"  \)
+
+
+#+end_src
+
+
+#+begin_src sh
+# #查找/home/test/目录下的所有.sh, .pl, .py结尾的文件（脚本）。
+find /home/test/ -regextype "posix-egrep" -regex "/home/test/.*\.(sh|pl|py)$"
+#+end_src
+
+
+
+#+begin_src sh
+# 查找lua和c#文件
+find ./ -regextype "posix-egrep" -regex ".*\.(cs|lua)$"
+
+find ./ -regex ".*\.(cs|lua)$"
+
+find ./ -regex ".*cs$" -regex ".*lua$"
+
+find  ./ -iregex '.*\.(cs|lua)$'
+
+find ./ -name "*(cs|lua)"
+
+
+# success
+find -E . -iregex '.*\.(lua|cs)' | xargs etags -a
+#+end_src
+
+
+
+ grep --exclude "TAGS" -nrI "LuaDLL" ./

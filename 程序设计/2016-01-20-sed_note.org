@@ -1,0 +1,63 @@
+#+SETUPFILE: ../css/level-1.orgcss
+#+TITLE: SedNote
+
+
+mac 下使用sed必须要用 -i '.bak' 指定后缀
+
+# sed replace
+
+
+#+begin_src shell
+  find .  -name "*.erl"  | xargs sed   -i '.bak' 's/{_Udid, _Username, Client} = case_helper:new_user()/{_UserId, _RecommendId, _Token, Client} = case_helper:new_user()/g'
+
+  find .  -name "sys.config" |grep _config  | xargs sed   -i '.bak' 's/{database, gl2x}/{database, gl2x},{port,27021}/g'
+  find .  -name "*.erl"  | xargs sed   -i '.bak' 's/token=Token/access_token=AccessToken/g'
+  find .  -name "*.[chea][orp][nlp]*"  |  xargs sed   -i '.bak' 's/ctl_map_events/ctl_map_acts/g'
+  find .  -name "*.[chea][orp][nlp]*"  |  xargs sed   -i '.bak' 's/controller/ctl/g'
+  find .  -name "*.[chea][orp][nlp]*"  |  xargs sed   -i '.bak' 's/mod_scene/mod_city/g'
+
+  find .  -name "*.hrl"  |  xargs sed   -i '.bak' 's/mod_scene/mod_city/g'
+  find .  -name "*.[chea][orp][nlp]*"  |  xargs grep mod_scene
+
+  find .  -name "*.config"  |  xargs sed   -i '.bak' 's/192.168.31.76/127.0.0.1/g'
+
+#+end_src
+
+
+#+begin_src go
+  package main
+
+  import "fmt"
+
+  func main() {
+    fmt.Println("good");
+  }
+#+end_src
+
+/v1.2/user/login?id=1001&message={"mobile":"13880963522","password":"111111"}
+/v1.2/user/login?id=1001&message={"mobile":"13880963581","password":"111111"}
+
+
+mac find .  -name "*.config"  |  xargs sed  -i  's/v1.2/v1.21/g'
+
+mac 
+
+find .  -name "*.config"  |  xargs sed  -i  's/192.168.31.76/127.0.0.1/g'
+
+find .  -name "*.config"  |  xargs sed  -i  's/127.0.0.1\//192.168.31.76\//g'
+
+find .  -name "*.config"  |  xargs sed  -i ''  's/127.0.0.1\//192.168.31.76\//g'
+
+http://127.0.0.1/
+
+ sed -i 's/\.$/\!/g' regular_express.txt
+
+v1.2
+
+-- QA机，演示机
+ws://139.198.2.65:9527
+ws://139.198.2.65:9528  1.20
+
+-> 121
+
+telnet 127.0.0.2 5672

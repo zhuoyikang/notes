@@ -1,0 +1,20 @@
+#+SETUPFILE: ../css/level-1.orgcss
+#+TITLE: Http相关
+
+* ab的使用
+
+** 普通
+ab -n 500 -c 200  url
+并反200个线程共请求500次
+
+** 发送post消息，并且加上自定义http头。
+
+ab -t 1 -n 10 -c 10  -T application/x-www-form-urlencoded -H 'udid: 7536FEE226E26FB9F48ABB7DC13B6D85' -H 'Appid: com.tap4fun.galaxyempire2_android' -H 'Locale: en' -H 'clientv: 1.4.9'  "http://54.200.10.68/servers/update_addr?background=0&"
+
+
+post相关数据放在udid_post文件内。
+
+ab -n 10 -c 1 http://54.200.10.68/servers/832/server_activity?lang=ru&
+
+
+ab -n 10 -c 1 http://54.200.10.68/servers/update_addr?background=1&

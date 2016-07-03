@@ -1,0 +1,8 @@
+#+SETUPFILE: ../css/level-1.orgcss
+#+TITLE: Jira
+
+当前未解决的bug.
+resolution = Unresolved ORDER BY updatedDate DESC
+
+当前为节约的bug.
+issuekey in issueHistory() ORDER BY lastViewed DESC

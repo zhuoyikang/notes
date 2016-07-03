@@ -1,0 +1,84 @@
+#+SETUPFILE: ../css/level-1.orgcss
+#+TITLE: Svn 笔记
+
+回退某个文件到某个版本:
+
++ 29243: 当前版本
++ 29141: 想回退的版本
+
+svn merge -r 30685:30357 item.csv
+
+
+取消本地修改。
+svn revert -R .
+
+
+svn merge -r 33213:33196 Android/text/EXTRA_TEXT.tfl
+
+* 在MacOSX上搭建svn客户端version
+
+http://i.cmgine.net/archives/9799.html
+
+* 在MacOSX上搭建svn服务器
+
+http://xiayong.blog.51cto.com/6292420/1088790
+
+1.打开terminal，可以使用如下命令确定我们的Mac OS系统确实已经安装了svnserve。
+svnserve --version
+
+2.新建一个目录
+sudo mkdir -p /data/svn/repositories/local
+
+3.创建仓库
+sudo svnadmin create /data/svn/repositories/local
+
+4.启动SVN
+sudo svnserve -d -r /data/svn/repositories --log-file=/var/log/svn.log
+
+5.测试是否启动
+telnet localhost 3690
+
+6.接下来我们创建默认目录结构。首先我们在本地把目录结构建立好
+
+sudo mkdir -p /tmp/svntemp
+cd /tmp/svntemp/
+sudo mkdir tags trunk branches
+
+7.本地目录结构倒入到我们的svn仓库中
+sudo svn import -m 'init repo' ./ svn://localhost/local
+
+8.现在我们的svn服务器已经可以用了
+可以使用svn://localhost/local来访问我们的local这个仓库，当然不要忘记了，我们刚才新添加了目录，需要修改权限。
+
+[local:/branches]
+@user = rw
+[local:/tags]
+@user = r
+[local:/trunk]
+@user = rw
+
+9.让SVN服务随操作系统启动
+
+svn在空闲时候才占了420k的内存而已，所以我决定让svn随Mac系统一起启动，编辑/etc/rc.local文件，在这个文件中加入以下内容(此文件在Mac系统中是没有的，需要手动创建)
+# to run the svnserver on the automatically.
+svnserve -d -r /data/svn/repositories
+
+
+
+
+
+
+* SVN忽略了很多文件.
+
+通过终端打开配置文件: open ~/.subversion/config
+把下面两行(也可能是一行)中的注释和*.a去掉,
+然后保存.
+#global-ignores = *.o *.lo *.la *.al .libs *.so *.so.[0-9]* *.a *.pyc *.pyo  
+#*.rej *~ #*# .#* .*.swp .DS_Store
+
+注意：去掉#号后要顶行
+ 
+
+或者在svn import 的时候加入参数 --no-ignore
+
+--no-ignore

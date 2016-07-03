@@ -1,0 +1,25 @@
+#+SETUPFILE: ../css/level-1.orgcss
+
+#+TITLE: Linux:Tcpdump的使用
+
+* tcpdump
+
+  普通情况下，直接启动tcpdump将监视第一个网络接口上所有流过的数据包。
+
+* tcpdump -i eth1
+
+  监视指定网络接口的数据包，如果不指定网卡，默认tcpdump只会监视第一个网络接口，一般是eth0，下面的例子都没有指定网络接口。
+
+* 监视指定主机的数据包
+
+  tcpdump host sundown : 打印所有进入或离开sundown的数据包.
+  tcpdump host 210.27.48.1 : 也可以指定ip,例如截获所有210.27.48.1 的主机收到的和发出的所有的数据包
+
+* x
+  tcpdump tcp port 23 host 210.27.48.1
+
+  来自: http://man.linuxde.net/tcpdump
+
+* wireshark
+
+  http://www.cnblogs.com/tankxiao/archive/2012/10/10/2711777.html

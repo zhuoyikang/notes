@@ -1,0 +1,447 @@
+#+SETUPFILE: ../css/level-1.orgcss
+#+TITLE: R语言学习
+
+* R语言实战
+** 语言介绍
+
+可以使用函数c()以向量的形式输入月龄和体重数数据.
+
+#+begin_src R
+# 使用<-对变量进行复制，c()函数新建一个向量.
+age <- c(1,3,4,4,6,3,7,9,10) 
+weight <- c(14,13,34,24,16,33,17,39,110)
+# 求平均值
+mean(weight)
+# 求标准差(也就是方差)
+sd(weight)
+# 划散点图
+plot(age,weight)
+#+end_src
+
+** 工作环境
+
+#+begin_src R
+# 查看当前的工作环境
+getwd()
+# 修改当前的工作环境
+setwd("~/source/wtfsc/R")
+# 列出当前工作空间的对象
+ls()
+# 删除一个或者多个对象
+rm(objectlist)
+# 执行一个脚本
+source("filename")
+#+end_src
+
+** 包安装
+
+#+begin_src R
+# 安装
+install.packages("maps")
+# 包的载入
+library(maps)
+#+end_src
+
+** 数据结构
+
+向量
+#+begin_src R
+# 向量
+a <- c(1,2,3)
+b <- c("one", "two", "three")
+c <- c(TRUE, FALSE, TRUE)
+
+# 标量是只有一个元素的向量.
+f <- 3
+
+# 访问向量中的元素
+a[1]
+a[c(1,3)]
+a[1:3]
+#+end_src
+
+矩阵
+#+begin_src R
+# 建立一个5x4的共20个元素的矩阵.
+y <- matrix(1:20, nrow=5, ncol=4)
+#+end_src
+
+** 图形初阶
+
+#+begin_src R
+
+# 绑定变量mtcars
+attach(mtcars)
+plot(wt,mpg)
+abline(lm(mpg~wt))
+title("Regression of MPG on weight")
+detach(mtcars)
+
+#+end_src
+
+* 逻辑操作
+** 字符串操作
+
+获取字符串长度：nchar()能够获取字符串的长度，它也支持字符串向量操作。注意它和length()的结果是有区别的。
+字符串粘合：paste()负责将若干个字符串相连结，返回成单独的字符串。其优点在于，就算有的处理对象不是字符型也能自动转为字符型。
+字符串分割：strsplit()负责将字符串按照某种分割形式将其进行划分，它正是paste()的逆操作。
+字符串截取：substr()能对给定的字符串对象取出子集，其参数是子集所处的起始和终止位置。
+字符串替代：gsub()负责搜索字符串的特定表达式，并用新的内容加以替代。sub()函数是类似的，但只替代第一个发现结果。
+字符串匹配：grep()负责搜索给定字符串对象中特定表达式 ，并返回其位置索引。grepl()函数与之类似，但其后面的"l"则意味着返回的将是逻辑值。
+
+#+begin_src R
+
+strsplit('123abcdefgabcdef','ab')
+
+[[1]]
+[1] "123"   "cdefg" "cdef" 
+
+#字符串连接：
+paste() #paste(..., sep = " ", collapse = NULL)
+
+#字符串分割：
+strsplit() #strsplit(x, split, extended = TRUE, fixed = FALSE, perl = FALSE)
+
+#计算字符串的字符数：
+nchar()
+
+#字符串截取：
+substr(x, start, stop)
+substring(text, first, last = 1000000)
+substr(x, start, stop) <- value
+substring(text, first, last = 1000000) <- value
+###########例子说明
+substr("abcdef",2,4)
+substring("abcdef",1:6,1:6)## strsplit is more efficient ...
+substr(rep("abcdef",4),1:4,4:5)
+x <- c("asfef", "qwerty", "yuiop[", "b", "stuff.blah.yech")
+substr(x, 2, 5)substring(x, 2, 4:6)
+substring(x, 2) <- c("..", "+++")
+
+###########
+
+#字符串替换及大小写转换：
+chartr(old, new, x)
+tolower(x)
+toupper(x)
+casefold(x, upper = FALSE) 
+
+#+end_src
+
+
+代码片段2
+
+#+begin_src R
+s <- "LINESTRING(0 0,1 1,2 2,3 3)"
+line_data <- substr(s,12, nchar(s)-1)
+line_array <- strsplit(line_data, ",")
+
+# 转变为向量.
+line_array <- unlist(line_array) ; line_array
+#+end_src
+** 向量操作
+
+#+begin_src R
+
+## 新建向量追加元素
+a <- c(1)
+b <- c(a,2)
+
+## 生成向量序列
+seq(length=10, from=10, to=100)
+[1]  10  20  30  40  50  60  70  80  90 100
+
+# from ,to ,by
+seq(10, 100, 3)
+[1]  10  20  30  40  50  60  70  80  90 100
+#+end_src
+
+** list操作
+
+#+begin_src R
+
+ltest <- list()
+for (i in 1:5) {
+ltest <- c(ltest, list(1))
+}
+
+#+end_src
+
+** 逻辑控制流
+
+循环遍历向量:
+
+#+begin_src R
+  a <- c()
+  b <- c(1,2,3)
+  for(i in b){ 
+    a <- c(a,i*2)
+  }
+  a
+#+end_src
+** 数据框操作
+
+#+begin_src R
+
+id <- c(1,2,3)
+x <- c(1,2,3)
+y <- c(1,2,3)
+data <-data.frame(id,x,y)
+
+#+end_src
+* 各种例子代码
+** 官网上画多边形的例子
+
+#+begin_src R
+  ## 官网上的绘制多边形例子.
+  x <- c(1:9,8:1)
+  y <- c(1,2*(5:3),2,-1,17,9,8,2:9)
+  op <- par(mfcol=c(3,1))
+  for(xpd in c(FALSE,TRUE,NA)) {
+    plot(1:10, main = paste("xpd =", xpd))
+    box("figure", col = "pink", lwd=3)
+    polygon(x,y, xpd=xpd, col="orange", lty=2, lwd=2, border="red")
+  }
+  par(op)
+
+  n <- 100
+  xx <- c(0:n, n:0)
+  yy <- c(c(0,cumsum(stats::rnorm(n))), rev(c(0,cumsum(stats::rnorm(n)))))
+  plot   (xx, yy, type="n", xlab="Time", ylab="Distance")
+  polygon(xx, yy, col="gray", border = "red")
+  title("Distance Between Brownian Motions")
+
+  ## Multiple polygons from NA values[从Na值的多个多边形]
+  ## and recycling of col, border, and lty[山口，边界和回收，并LTY]
+  op <- par(mfrow=c(2,1))
+  plot(c(1,9), 1:2, type="n")
+  polygon(1:9, c(2,1,2,1,1,2,1,2,1),
+          col=c("red", "blue"),
+          border=c("green", "yellow"),
+          lwd=3, lty=c("dashed", "solid"))
+  plot(c(1,9), 1:2, type="n")
+  polygon(1:9, c(2,1,2,1,NA,2,1,2,1),
+          col=c("red", "blue"),
+          border=c("green", "yellow"),
+          lwd=3, lty=c("dashed", "solid"))
+  par(op)
+#+end_src
+
+** 在一张图上画两个多边形
+
+#+begin_src R
+  ## 成功绘制出多边形
+  xx1 <- c(0,0,2,2)
+  yy1 <- c(0,2,2,0)
+  xx2 <- c(3.5,3.5,4.5,4.5)
+  yy2 <- c(3.5,4.5,4.5,3.5)
+
+  ## x,y表示正方形区域的半径.
+  ## x和y是地图的半径，它的面积必须要能包含所有的点，否则绘制出错.
+  plot(3, 3, type="n", xlab="Time", ylab="Distance")
+
+  polygon(xx1, yy1,  border = "red")
+  polygon(xx2, yy2,  border = "red")
+  title("Distance Between Brownian Motions")
+
+#+end_src
+
+** 加载中国地图shp并绘制出来
+
+#+begin_src R
+## 从Shp文件中绘制地图代码
+##
+library(maptools)
+mydat = readShapePoly("../mat/china_map/bou2_4p.shp")
+plot(mydat)
+#+end_src
+
+** 连接Mysql数据库
+
+#+begin_src sh
+Open the ODBC Administrator:
+Click on Finder.
+In the search box, type ODBC Administrator. If the ODBC Administrator is not found, navigate to the Utilities folder and locate the application.
+Double-click on ODBC Administrator.
+If the ODBC Administrator is not already installed on your computer, it can be downloaded from the following link: ODBC Administrator Tool for Mac OSX v1.0.
+
+#+end_src
+
+#+begin_src R
+## 安装 
+## 需要先安装brew install unixodbc
+install.packages("RODBC")
+
+## 使用
+library(RODBC)
+channel <- odbcConnect("test", uid="root", pwd="123")
+sqlTables(channel);
+# 将yy表中的数据复制到数据框
+data <- sqlFetch(channel,"yy")
+
+# 将xx表中的数据复制到数据框
+data <- sqlQuery(channel,"select * from xx")
+
+#+end_src
+** 连接PosgrepSQL
+
+#+begin_src R
+## 安装
+install.packages("RPostgreSQL")
+
+## 使用
+library(RPostgreSQL)
+db <- dbConnect(drv,dbname = "gis_tr",host = "127.0.0.1",port = 5432,user = "zhuoyikang")
+q <- "SELECT id, ST_AsText(geom) FROM lines"
+data <- dbGetQuery(db, q)
+#+end_src
+
+从PostGreSQl中读取多个多边形并绘制出来
+
+#+begin_src R
+
+plot(data$id,data$id)
+title("Regression of MPG on weight")
+
+setwd("source/wtfsc/R")
+source("draw_polygon.R")
+
+#+end_src
+
+
+从PostGrepSql中读取多边形数据并绘制
+
+#+begin_src R
+
+library(RPostgreSQL)
+drv <- dbDriver("PostgreSQL")
+db <- dbConnect(drv,dbname = "gis_tr",host = "127.0.0.1",port = 5432,user = "zhuoyikang")
+q <- "SELECT id, ST_AsText(geom) FROM polygon_2"
+datastr <- dbGetQuery(db, q)
+
+polygon_vectorstr <- datastr$st_astext
+
+## 初始化一个空的polygon列表，里面会有多个polygon.
+polygon_vector <- c()
+finalx <- c()
+finaly <- c()
+i <- 1
+for(polygonstr in polygon_vectorstr) {
+  line_data <- substr(polygonstr, 10, nchar(polygonstr)-2)
+  line_array <- strsplit(line_data, ",")
+  ## 转变为向量.
+  line_array <- unlist(line_array)
+  cx <- c()
+  cy <- c()
+  lineLength = length(line_array)
+  for(pointstr in line_array) {
+    pointstrarray = strsplit(pointstr, " ")
+    pointstrarray <- unlist(pointstrarray)
+    cx <- c(cx, as.numeric(pointstrarray[1]))
+    cy <- c(cy, as.numeric(pointstrarray[2]))
+
+    finalx <- c(finalx, as.numeric(pointstrarray[1]))
+    finaly <- c(finaly, as.numeric(pointstrarray[2]))
+  }
+  data <- data.frame(seq(1,lineLength,1),cx,cy)
+  polygon_vector <- c(polygon_vector,cx,cy)
+}
+plot(finalx,finaly)
+
+##########################################
+
+polygon_vectorstr <- datastr$st_astext
+
+## 初始化一个空的polygon列表，里面会有多个polygon.
+
+i <- 1
+for(polygonstr in polygon_vectorstr) {
+  line_data <- substr(polygonstr, 10, nchar(polygonstr)-2)
+  line_array <- strsplit(line_data, ",")
+  ## 转变为向量.
+  line_array <- unlist(line_array)
+  cx <- c()
+  cy <- c()
+  lineLength = length(line_array)
+  for(pointstr in line_array) {
+    pointstrarray = strsplit(pointstr, " ")
+    pointstrarray <- unlist(pointstrarray)
+    cx <- c(cx, as.numeric(pointstrarray[1]))
+    cy <- c(cy, as.numeric(pointstrarray[2]))
+  }
+  polygon(cx, cy,  border = "red")
+}
+
+
+viewX <-c(1.5, 1.5, 2.5, 2.5, 1.5)
+viewY <-c(2.5, 3.5, 3.5, 2.5, 2.5)
+polygon(viewX, viewY,  border = "green")
+
+#+end_src
+
+** 画一个等比例缩放的多边形
+
+#+begin_src R
+
+  ## 成功绘制出多边形
+  xx1 <- c(3.5,3.5,4.5,4.5)
+  yy1 <- c(3.5,4.5,4.5,3.5)
+  rate <- 0.5
+
+  xx2 <- xx1*rate
+  yy2 <- yy1*rate
+
+  ## x,y表示正方形区域的半径.
+  ## x和y是地图的半径，它的面积必须要能包含所有的点，否则绘制出错.
+  plot(c(xx1,xx2), c(yy1,yy2), type="n", xlab="Time", ylab="Distance")
+
+  polygon(xx1, yy1,  border = "red")
+  polygon(xx2, yy2,  border = "green")
+  title("Distance Between Brownian Motions")
+
+#+end_src
+
+* 保存图片的方法
+
+
+#+begin_src R
+setwd("c://")
+plot(1:10)
+rect(1, 5, 3, 7, col="white")
+savePlot("CTplot", type=c("jpg"),device=dev.cur(),restoreConsole=TRUE)
+#+end_src
+
+
+在R编辑器下运行成功。
+可是我在cmd中，使用Rscript 去运行就无法生成图片文件。
+问题应该是，命令行无法在窗口中画图，所以也就无法保存图片。
+后来，在网上找到一种直接生成图片的方法。
+
+
+setwd("c://")
+#+begin_src R
+jpeg(file="myplot.jpeg")
+plot(1:10)
+rect(1, 5, 3, 7, col="white")
+dev.off()
+#+end_src 
+
+命令行下运行成功。同时查到另外的几种格式生成函数
+
+#+begin_src R
+# 第一种png格式
+png(file="myplot.png", bg="transparent")
+dev.off()
+
+# 第二种jpeg格式
+jpeg(file="myplot.jpeg")
+dev.off()
+
+# 第三种pdf格式
+pdf(file="myplot.pdf")
+dev.off()
+
+#+end_src
+
+setwd("~/source/wtfsc/R")
+source("draw.R")

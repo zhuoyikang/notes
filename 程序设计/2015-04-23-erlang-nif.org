@@ -1,0 +1,121 @@
+#+SETUPFILE: ../css/level-1.orgcss
+#+TITLE: Erlang NIF
+
+   + http://wqtn22.iteye.com/blog/1603729
+   + [[http://www.erlang.org/doc/tutorial/nif.html][官网例子]]
+   + [[https://www.google.com.hk/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&ved=0CBsQFjAA&url=http%3A%2F%2Fwww.erlang.org%2Fdoc%2Fman%2Ferl_nif.html&ei=_OU8Va6sOJPhoASK8YCAAw&usg=AFQjCNGvOOXo1HMNHUwR4SX0RNZoEb_Bjg&cad=rja][官方文档]] [[http://dp0304.com/erlang/2012/09/20/erlang_nif_chinese/][中文翻译文档]]
+
+* 最简单的nif编写方式
+
+#+begin_src C
+#include "erl_nif.h"
+
+static ERL_NIF_TERM hello(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+{
+    return enif_make_string(env, "Hello world!", ERL_NIF_LATIN1);
+}
+
+static ErlNifFunc nif_funcs[] = {
+    {"hello", 0, hello}
+};
+
+
+ERL_NIF_INIT(nif_1,nif_funcs,NULL,NULL,NULL,NULL)
+
+#+end_src
+
+ERL_NIF_INIT的第一个参数是该NIF的模块名，第二个参数是该模块包含的所有可供外部调用的函数定义数组，本例中，niftest即为NIF的模块名，而nif_funcs即为函数定义数组，nif_funcs包含了一个函数定义hello，其参数个数为0，具体实现为c函数static ERL_NIF_TERM hello(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])。
+
+
+NIF的模块名可以将其与同名的erlang module对应起来。
+对于linux平台，按照官方文档给出的编译方法，
+
+#+begin_src sh
+# not work
+gcc -fPIC -shared -o  nif_1.so nif_1.c -I ~/erlang/r15b02/usr/include
+
+# work
+gcc -undefined dynamic_lookup -dynamiclib nif_1.c -o nif_1.so -I ~/erlang/r15b02/usr/include
+#+end_src
+
+执行
+
+#+begin_verse
+(emacs@T4F-MBP-13725)2> c(nif_1).
+{ok,nif_1}
+(emacs@T4F-MBP-13725)2> nif_1:hello().
+"NIF library not loaded"
+(emacs@T4F-MBP-13725)3> nif_1:init().
+ok
+(emacs@T4F-MBP-13725)4> nif_1:hello().
+"Hello world!"
+(emacs@T4F-MBP-13725)5> nif_1:hello().
+#+end_verse
+
+可以见得init不会主动执行，除非增加 :  -on_load(init/0), 在erlang模块被load的时候，会调用指定方法把c模块也load进。
+
+一个NIF库被load时候是绑定erlang模块的version。如果erlang模块更新了，新模块要去加载多一次NIF作为自己的（或选择不去加载，这样的话，新的erlang模块并没有NIF）。如果一个NIF被多次load和调用的话，意味着NIF里面的static data同样会被共享。为了避免这样的无心的共享static datfa，每个erlang模块代码应该要保存自己的私有数据，而在NIF里面，可以通过调用void *enif_priv_data(ErlNifEnv* env)来获得私有数据。
+
+
+没有方法去声明unload一个NIF库，当erlang模块被卸载时候，NIF会被自动unload。
+
+* 基于rebar的nif的例子.
+
+  例子集合http://github.com/zhuoyikang/nif-examples.git
+
+  文件路径结构
+
+#+begin_verse
+  drwxr-xr-x  4 zhuoyikang 742773148 136 04-26 20:53 c_src
+  drwxr-xr-x  4 zhuoyikang 742773148 136 04-26 20:53 ebin
+  drwxr-xr-x  3 zhuoyikang 742773148 102 04-26 20:53 priv
+  -rw-r--r--  1 zhuoyikang 742773148  59 04-26 20:52 rebar.config
+  drwxr-xr-x  4 zhuoyikang 742773148 136 04-26 20:52 src
+  drwxr-xr-x  3 zhuoyikang 742773148 102 04-26 20:52 test
+
+#+end_verse
+
+  rebar.config
+
+  #+begin_src erl
+{port_specs, [
+    {"priv/resources.so", ["c_src/*.c"]}
+]}.
+  #+end_src
+
+  编译
+
+  rebar --config rebar.config compile
+
+* 其他
+
+https://github.com/basho/eleveldb/tree/develop/c_src
+
+erlang lua
+
+https://github.com/rtraschke/erlang-lua
+https://github.com/rvirding/luerl
+
+
+还是可以稳定使用的 =>
+https://github.com/raycmorgan/erl-lua
+
+
+
+https://github.com/Eonblast/Erlualib
+* Nif的一些警惕
+
+  http://cryolite.iteye.com/blog/1926925
+  http://jlouisramblings.blogspot.tw/2013/07/problematic-traits-in-erlang.html
+
+* Erlang Lua相关
+
+  Erlang-Lua: How to write an Erlang C Node
+
+  + http://www.erlang-factory.com/static/upload/media/1417718639497123robby_raschke_erlanglua_c_node.html#32
+  + https://github.com/rtraschke/erlang-lua
+
+
+  Erlualib
+
+  + https://github.com/Eonblast/Erlualib

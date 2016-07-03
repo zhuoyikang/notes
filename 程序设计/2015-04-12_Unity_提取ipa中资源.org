@@ -1,0 +1,56 @@
+#+SETUPFILE: ../css/level-1.orgcss
+#+TITLE: 如何提取unity3d中的ipa的资源。
+
+原文 http://www.xuanyusong.com/archives/2584
+
+* 拷贝ipa。
+
+  通过itunes拷贝应用程序ipa到某文件夹下面，直接使用unzip对文件夹解压。
+
+* 下载这个牛逼的程序disunity
+
+  https://github.com/ata4/disunity/releases ，感谢开源，感谢github。
+
+* 下载jdk。
+
+  disunity使用java编写，你需要下载jdk7 http://www.oracle.com/technetwork/java/javase/downloads/jdk7-downloads-1880260.html.  your are welcome
+
+* 执行以下指令对后缀为assets的文件进行抽取，即可获得资源
+
+#+begin_src sh
+java -jar path/disunity.jar extract  *.assets
+#+end_src
+
+* 简单描述下结构
+
+1. AudioClip：这里是解开的游戏全部声音文件，可以直接播放。
+2. Mesh：这里解开的游戏全部模型文件，他的格式是.obj 你需要在3dmax或者maya中打开，然后转成FBX就可以在u3d里面看到了，嘿嘿。
+3. Shader：这里解开游戏 全部用的shader文件，可以直接使用。
+4. TextAsset：这里解开的是游戏中全部用的text文本文件，如果文本不加密，这里就全都会看到的 嘿嘿呵。
+5. Texture2D：这里放的就是游戏中用到的所有图片，一般是由tga或者 ktx组成，tga可以直接在电脑上查看，但是.ktx需要借助工具来看。
+
+* 如何查看ktx ?
+
+http://community.imgtec.com/files/mac-osx-installer-powervr-sdk-3-4/?wpdmdl=5604
+
+下载 PowerVR Tools & SDK v3.3 – MacOS X Installer
+下载以后需要安装，安装的时候有一个打开文件的类型，你可以勾选一下.ktx
+安装完以后，运行文件的路径很深
+
+/Applications/Imagination/PowerVR/GraphicsSDK/PVRTexTool/GUI/OSX_x86
+
+双击打开就可以。如下图所示，把ktx的图片拖进来就可以看到它的原图了。。
+
+* 把KTX批量转成PNG
+
+#+begin_src sh
+@echo off
+path %path%;”D:\Program Files (x86)\TexturePacker\bin”
+path %path%;”D:\Program Files (x86)\PVRTexTool\CLI\”
+
+for /f “usebackq tokens=*” %%d in (dir /s /b *.ktx) do (
+PVRTexToolCLI.exe -f PVRTC1_4_RGB -i “%%d” -o “%%~dpnd.pvr”
+TexturePacker.exe –opt RGBA8888 –sheet “%%~dpnd.png” “%%~dpnd.pvr”
+del %%~dpnd.pvr
+)
+#+end_src

@@ -1,0 +1,13 @@
+#+SETUPFILE: ../css/level-1.orgcss
+#+TITLE: Supervisor
+
+supervisord : supervisor的服务器端部分，启动supervisor就是运行这个命令
+supervisorctl：启动supervisor的命令行窗口。
+
+测试是否安装成功：
+
+echo_supervisord_conf
+
+创建配置文件：
+
+echo_supervisord_conf > /etc/supervisord.conf

@@ -1,0 +1,119 @@
+mysql相关
+
+* Mysql:异常字符自动截断
+** 问题描述
+
+某日服务器数据库出现了一下情况，玩家的角色名会被截断，原来是玩家输入用户名时会有非法的utf8字符，mysql自动将非法字符后面的内容截断了。
+
+** 解决方法
+
+使用mochieweb中提供的库直接来验证输入是否为合法的utf8字符:
+
+#+begin_src erlang
+check_utf8(S) when is_list(S) ->
+  check_utf8(list_to_binary(S));
+check_utf8(<<S/binary>>) ->
+  S1=mochiutf8:valid_utf8_bytes(S),
+  case size(S1) == size(S) of
+    true -> ok;
+    false -> {error, username_unvalid}
+  end;
+check_utf8(_) ->
+  ok.
+#+end_src
+
+** 参考文章
+
+#+begin_src bash
+  
+1366 - Incorrect string value: '/xE2/x80/x94200...' for column
+
+#+end_src
+
+mysql4.1开始分字符集了，在保留数据时候会察看和转换数据编码。最近有个客户反响公布文章，有局部保留后内容被割断了，只保留了一局部，我一测验觉察是编码问题引起的。
+
+这客户网页和数据库用的都是是big5编码，默认过程连上数据库后会发一句：
+
+#+begin_src bash
+www.fo4now.info;SET character_set_connection=big5, character_set_results=big5, character_set_client=binary
+#+end_src
+* 慢查询
+最近使用RoR发现Mysql有很多慢查询，这些慢查询会导致http单个请求的市场延长到3s以上(正常情况<1s)，从而引起unicorn的超时kill，所以必须要消除所有的慢查询。
+
+** 如何开启慢查询(不重启Mysql)
+
+[[http://coolnull.com/3312.html][点我]]
+
+正常mysql开启慢查询是通过在/etc/my.cnf添加以下内容，然后重启数据库来实现开启慢查询的。
+
+#+begin_verse
+log-slow-queries=/web/var/localhost-slow.log
+long_query_time=2
+log-queries-not-using-indexes
+#+end_verse
+
+
+但线上数据库是不能够随便重启的。
+
+从mysql 5.1.6版本起，general query log 和slow query log支持写文件或写数据库表两种方式，并且日志的开启，输出方式的修改，都可以在global级别动态修改。
+只需简单通过set global log_slow_queries=ON;即可开启慢查询，而不需要重启数据库！
+
+
+mysql> show variables like '%slow%';
++---------------------+-----------------------------+
+| Variable_name       | Value                       |
++---------------------+-----------------------------+
+| log_slow_queries    | OFF                         |
+| slow_launch_time    | 2                           |
+| slow_query_log      | OFF                         |
+| slow_query_log_file | /web/var/localhost-slow.log |
++---------------------+-----------------------------+
+4 rows in set (0.00 sec)
+mysql>
+mysql> set global log_slow_queries=ON;
+Query OK, 0 rows affected, 1 warning (0.46 sec)
+mysql> set global long_query_time=5;  //对当前窗口无效，必须要重新登录.
+Query OK, 0 rows affected (0.00 sec)
+mysql>
+mysql> show variables like '%slow%';
++---------------------+-----------------------------+
+| Variable_name       | Value                       |
++---------------------+-----------------------------+
+| log_slow_queries    | ON                          |
+| slow_launch_time    | 2                           |
+| slow_query_log      | ON                          |
+| slow_query_log_file | /web/var/localhost-slow.log |
++---------------------+-----------------------------+
+4 rows in set (0.00 sec)
+
+** MySQL慢查询分析mysqldumpslow
+
+[[http://www.ccvita.com/410.html][点我]]
+
+mysqldumpslow命令
+
+/usr/local/bin/mysqldumpslow -s c -t 10 /usr/local/mysql/data/T4F-MBP-13725-slow.log
+
++ -s, 是表示按照何种方式排序，c、t、l、r分别是按照记录次数、时间、查询时间、返回的记录数来排序，ac、at、al、ar，表示相应的倒序；
++ -t, 是top n的意思，即为返回前面多少条的数据；
++ -g, 后边可以写一个正则匹配模式，大小写不敏感的；
+* 随机查询
+
+** 最简单的解法:
+
+#+begin_src sql
+select * from trans_infos order by rand() limit 100;
+#+end_src
+
+这时候mysql会对每一行数据执行rand()。所以优化的方案时减少rand()的次数.
+
+** 搜索Google，网上基本上都是查询max(id) * rand()来随机获取数据。
+
+#+begin_src sql
+SELECT *
+FROM `table` AS t1 JOIN (SELECT ROUND(RAND() * (SELECT MAX(id) FROM `table`)) AS id) AS t2
+WHERE t1.id >= t2.id
+ORDER BY t1.id ASC LIMIT 5;
+#+end_src
+
+

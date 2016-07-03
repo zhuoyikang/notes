@@ -1,0 +1,70 @@
+* DONE 快捷键
+http://www.ceeger.com/Manual/UnityHotkeys.html
+
+* DONE 随机种子和随机数
+
+#+begin_src csharp
+System.Random r = new System.Random(Guid.NewGuid().GetHashCode());
+r.Next(100, 10000)
+#+end_src
+
+* TODO Standalone input module 如何使用
+* DONE C#协程如何使用
+
+使用携程等待来避免直接WaitAndPrint阻塞当前的执行流
+
+#+begin_src csharp
+  using UnityEngine;
+  using System.Collections;
+
+  public class ExampleClass : MonoBehaviour {
+
+    void Start() {
+      print("Starting " + Time.time);
+      StartCoroutine(WaitAndPrint(2.0F));
+      print("Before WaitAndPrint Finishes " + Time.time);
+    }
+
+    IEnumerator WaitAndPrint(float waitTime) {
+      yield return new WaitForSeconds(waitTime);
+      print("WaitAndPrint " + Time.time);
+    }
+
+  }
+#+end_src
+
+* TODO EasyTouch如何使用
+* TODO Canvas UI如何制作?
+* DONE Awake和Start的区别?
+
+简单说明一下，Awake在MonoBehavior创建后就立刻调用，Start将在MonoBehavior创建后在该帧Update之前，在该Monobehavior.enabled == true的情况下执行。
+
+
+Awake
+
++ Awake在所有的对象都被初始化完成后再调用，所以很安全。
++ Awake在脚本的生命周期中只会被调用一次。
++ 每个Awake的调用顺序是随机的。
+
+Start
+
++ Start在脚本的生命周期中只会被调用一次。
++ 每个Start的调用顺序是随机的。
+* DONE 热更新
+
+http://www.ceeger.com/forum/read.php?tid=16483
+
+来自UnityLua群里“赵欣悦”同学无私奉献的热更新思路：我从最开始说下我的思路吧。通过版本号来判断是大更新还是小更新，游戏初始化的时候，先下载最新版本号和当前版本号比对。如果需要小更新，那么下载一个需要更新的表，通过表去下载各种资源和脚本的AssetsBundle。其中包括了一个数据文件，是当前版本中，会被lua托管的函数列表。然后以函数名作为key存在一个字典中，准确的说是 类名_函数名，这个也是我们所有lua脚本的文件名。在程序运行的时候，每个函数调用最开始判断一下这个函数是否存在于字典中。如果不存在，执行C#脚本。如果存在，判断字典中当前项的TextAsset是否为空，为空的话，从AB中加载，并DoString。如果不为空，直接DoString。这样就执行了更新上去的Lua脚本了，函数就return掉，不执行C#脚本了。新增的所有面板都用同一个C#脚本去管理，这个C#脚本只是lua的入口，可以通过管理器去赋值。 
+
+* TODO Mac下的资源目录
+
+fwef
+
+/Users/zhuoyikang/Library/Application Support/jhqc/VCity/ResData/window
+
+plink -i ~/Documents/SvrDoc/jhqc.ppk 139.198.2.65 -P 8104 -l root
+* TODO vs2010和unity配置
+
+http://www.xifarm.com/unity3d_vs2010/
+
+https://visualstudiogallery.msdn.microsoft.com/6e536faa-ce73-494a-a746-6a14753015f1

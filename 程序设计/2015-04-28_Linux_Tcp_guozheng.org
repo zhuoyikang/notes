@@ -1,0 +1,564 @@
+#+SETUPFILE: ../css/level-1.orgcss
+#+TITLE: Linux:网络相关参数汇编
+
+http://www.cnblogs.com/fczjuever/archive/2013/04/17/3026694.html
+
+今天向服务器童鞋学些网络相关参数，收到不少干货，这里一点点记录下。
+
+为了获得直观认识，对于每一个参数我都会说明他的用法，再附上一个案例或者案例链接，帮助各位看官认识。
+
+所有的修改方式都是在/etc/sysctl.conf修改后执行sysctl -p，下文中将不再说明修改方法。
+
+超完整: http://www.chinaxing.org/articles/linux/2015/03/12/2015-03-11-linux-tcp-tunning.html#sec-5-2
+
+* 总状态图
+
+  [[file:../img/server/tcp_net_state_frame.png]]
+
+* 三次握手图
+
+  1. 当客户端发送syn
+  2. 然后server端接收到，然后发送syn + ack
+  3. 然后client接收到syn+ack之后，再次发送ack后，(client进入establish状态)
+  4. 最终server端收到最后一个ack，进入establish状态。
+
+  [[file:../img/server/tcp_3_shakehand.png]]
+
+* net.core.somaxconn integer
+
+  这个参数定义了系统中每一个端口最大的监听队列的长度，这是个全局的参数。
+
+  查看当前设置linux: cat /proc/sys/net/core/somaxconn，发现默认为128，建议修改为2048
+
+  编程接口
+
+  #+begin_src c
+  int listen(fd ,backlog);
+  #+end_src
+
+** 案例:高负载网关调优
+
+   1. 看这篇文章可以获得直观认识，实际的案例，通过此参数调整增加网关负载: [[http://wiki.51osos.com/wiki/Nginx_%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96%E4%B9%8Bnet.core.somaxconn][Nginx 性能优化之net.core.somaxconn]]
+   2. 如果你发现你的服务器，cpu或者其他负载都很低，但是大量客户端发起连接时就是要超时，那你该修改这个参数了..我就遇到了，泪流满面。
+
+* netdev_max_backlog integer
+
+  在每个网络接口接收数据包的速率比内核处理这些包的速率快时，允许送到队列的数据包的最大数目。默认值1000，建议保持不变。
+
+  理由：内核都处理不过来了，收过去不是白暂内存吗?
+
+* net.ipv4.tcp_max_syn_backlog integer 半连接攻击?
+
+  该参数决定了SYN_RECV状态队列的数量，一般默认值为512或者1024，即超过这个数量，系统将不再接受新的TCP连接请求，一定程度上可以防止系统资源耗尽。可根据情况增加该值以接受更多的连接请求。
+
+  但是机器上存在大量的SYN_RECV状态可能是遭遇了半连接攻击，也会让你的服务器拒绝服务器，所以你可能需要将其调整的大一点:
+
+  查看当前值 cat /proc/sys/net/ipv4/tcp_max_syn_backlog  => 4096.
+
+* tcp_abort_on_overflow boolean
+
+  当tcp建立连接的3路握手完成后，将连接置入 ESTABLISHED 状态并交付给应用程序的 backlog 队列时，会检查 backlog 队列是否已满。若已满，通常行为是将连接还原至 SYN_ACK 状态，以造成3路握手最后的 ACK 包意外丢失假象 —— 这样在客户端等待超时后可重发 ACK —— 以再次尝试进入 ESTABLISHED 状态 —— 作为一种修复/重试机制。
+
+  如果启用 tcp_abort_on_overflow 则在检查到 backlog 队列已满时，直接发 RST 包给客户端终止此连接 —— 此时客户端程序会收到 104 Connection reset by peer 错误。
+
+  + 开启时： backlog队列满时，RST连接
+  + 关闭时： backlog队列满时，重发syn+ack，告知客户端重试。
+
+  网络服务器应该打开，因为如果服务器在高负载的情况下客户端不断的重试会导致滚雪球的现象，最总把服务器拖垮，所以建议打开
+
+  [[http://baike.baidu.com/view/7825209.htm][net.ipv4编辑相关参数]]
+
+* tcp_defer_accept
+
+  设置这个选项后，服务器收到3次握手中最后一个ack时不急于创建socket返回给accept，而是延迟到第一个数据包到来时才返回给accept。
+
+** 是否可以防御全连接攻击?
+
+   当正确的设置了TCP_DEFER_ACCEPT选项之后，server端会在接收到最后一个ack之后，并不进入establish状态，而只是将这个socket标记为acked，然后丢掉这个ack。此时server端这个socket还是处于syn_recved(半连接状态)。
+
+   然后接下来就是等待client发送数据，而由于这个socket还是处于syn_recved,因此此时就会被syn_ack定时器所控制，对syn ack进行重传(超过tcp_max_syn_backlog不再接受新的tcp连接)。
+
+   而重传次数是由我们设置TCP_DEFER_ACCEPT传进去的值以及TCP_SYNCNT选项，proc文件系统的tcp_synack_retries一起来决定的。
+
+   http://www.pagefault.info/?p=346
+
+   全连接攻击：如果你的服务器被大量的客户端建立了连接，但是客户端啥也不干，直到所有的端口或者其他系统资源被用完导致拒绝服务，就是“全连接攻击”了。
+
+   那么问题来了：  如果客户端长期不发包，服务器会丢弃这个连接？ 还是成功返回连接？ 是否能直接防御全连接攻击?
+** 服务器代码
+
+#+begin_src c
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+#include <linux/socket.h>
+#include <netinet/tcp.h>
+
+#define PORT 1235
+#define MAXSOCKFD 10
+
+
+int main(int argc, char *argv[])
+{
+    int sockfd,newsockfd;
+    struct sockaddr_in addr;
+
+    // struct sockaddr *addrt;
+    socklen_t addr_len = sizeof(struct sockaddr_in);
+    char buffer[256];
+    char msg[] ="Welcome to server!";
+
+    if ((sockfd = socket(AF_INET,SOCK_STREAM,0))<0){
+        perror("socket");
+        exit(1);
+    }
+
+    bzero(&addr,sizeof(addr));
+    // memset(&addr,0,sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(PORT);
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+    //设置端口重用
+    int opt = 1;
+    if(setsockopt(sockfd,SOL_SOCKET,SO_REUSEADDR,&opt,sizeof(opt)) <0 ) {
+        perror("port reuse");
+        exit(1);
+    }
+
+    //设置tcp_defer_accept
+    int val = 5;
+    if(setsockopt(sockfd, SOL_TCP, TCP_DEFER_ACCEPT, &val, sizeof(val))){
+        perror("tcp_defer_accept");
+        exit(1);
+    }
+
+
+    // addrt = &addr;
+    if(bind(sockfd,(struct sockaddr *)&addr,sizeof(addr))<0){
+        perror("connect");
+        exit(1);
+    }
+
+    if(listen(sockfd,3)<0){
+        perror("listen");
+        exit(1);
+    }
+
+    while(1) {
+        if((newsockfd = accept(sockfd,(struct sockaddr *)&addr,&addr_len))<0) {
+            perror("accept");
+        }
+        else{
+            printf("new connected\n");
+        }
+        printf("loop\n");
+    }
+}
+#+end_src
+
+** 再写一个客户端程序
+
+#+begin_src c
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+#define PORT 1235
+#define SERVER_IP "127.0.0.1"
+
+int main(int argc, char *argv[])
+{
+    int s;
+    struct sockaddr_in addr;
+    char buffer[256];
+
+    if((s = socket(AF_INET,SOCK_STREAM,0))<0){
+        perror("socket");
+        exit(1);
+    }
+
+    /* 填写sockaddr_in结构*/
+    bzero(&addr,sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_port=htons(PORT);
+    addr.sin_addr.s_addr = inet_addr(SERVER_IP);
+
+    /* 尝试连线*/
+    if(connect(s,(struct sockaddr *)&addr,sizeof(addr))<0){
+        perror("connect");
+        exit(1);
+    }
+
+
+    /* 接收由server端传来的信息*/
+    recv(s,buffer,sizeof(buffer),0);
+    printf("%s\n",buffer);
+
+    while(1){
+        bzero(buffer,sizeof(buffer));
+        /* 从标准输入设备取得字符串*/
+        read(STDIN_FILENO,buffer,sizeof(buffer));
+        /* 将字符串传给server端*/
+        if(send(s,buffer,sizeof(buffer),0)<0){
+            perror("send");
+            exit(1);
+        }
+    }
+
+}
+#+end_src
+
+** 试验结论
+   在linux上编译两个程序(注意时linux哟，mac下没有defer_accept这个东西)。
+   启动服务器后直接使用客户端连接，通过netstat查看状态
+
+#+begin_verse
+developer@gl-debug:~$ netstat -nat | grep 1235
+tcp        0      0 0.0.0.0:1235            0.0.0.0:*               LISTEN
+tcp        0      0 127.0.0.1:1235          127.0.0.1:13908         SYN_RECV
+tcp        0      0 127.0.0.1:13887         127.0.0.1:1235          TIME_WAIT
+tcp        0      0 127.0.0.1:13908         127.0.0.1:1235          ESTABLISHED
+#+end_verse
+
+    服务器端的监听套接口处于LISTEN状态，其针对客户端请求而建立的连接套接口处于SYN_RECV状态，而客户端tcp_defer_test进程的套接口处于ESTABLISHED状态。
+    针对如此，根据选项TCP_DEFER_ACCEPT的特性，它在一定程度上缓解了TCP全连接攻击；相比在应用层处理这些非法的客户端请求（即TCP全连接攻击）所带来的消耗，把它们直接交给内核去做处理所消耗的系统资源会更少一点。
+
+    但是，过了几秒之后，accept会返回，依然会建立一个正常的连接，所以他只能缓解全连接攻击，但是不能解决，这样说来有点鸡肋，因为syn_recv状态还有半连接攻击嘛。
+
+** 其他连接
+
+   [[http://www.lenky.info/archives/2013/02/2219][点我-无法再更详细的分析]]-从内核说明问题-此文深刻说明了这个参数..
+
+** 真正的应用场景：减少网络包传输，并且降低网络延迟
+
+   TCP/IP式的连接过程就是所谓“3次握手”。首先，客户程序发送一个设置SYN标志而且不带数据负载的 TCP包（一个SYN包）。服务器则以发出带SYN/ACK标志的数据包（一个SYN/ACK包）作为刚才收到包的确认响应。客户随后发送一个ACK包确 认收到了第2个包从而结束连接过程。在收到客户发来的这个SYN/ACK包之后，服务器会唤醒一个接收进程等待数据到达。当3次握手完成后，客户程序即开 始把“有用的”的数据发送给服务器。通常，一个HTTP请求的量是很小的而且完全可以装到一个包里。但是，在以上的情况下，至少有4个包将用来进行双向传 输，这样就增加了可观的延迟时间。此外，你还得注意到，在“有用的”数据被发送之前，接收方已经开始在等待信息了。
+
+   为了减轻这些问题所带来的影响，Linux（以及其他的一些操作系统）在其TCP实现中包括了TCP_DEFER_ACCEPT选项。它们设置在侦听套接 字的服务器方，该选项命令内核不等待最后的ACK包而且在第1个真正有数据的包到达才初始化侦听进程。在发送SYN/ACK包之后，服务器就会等待客户程 序发送含数据的IP包。现在，只需要在网络上传送3个包了，而且还显著降低了连接建立的延迟，对HTTP通信而言尤其如此。
+
+* TIME_WAIT是什么？为什么会存在
+  [[http://huoding.com/2013/12/31/316][参考文章-作者讲的很清楚，我直接盗了他的内容]]
+
+  关于TIME_WAIT相关的参数很多，所以首先需要说明什么时TIME_WAIT，它为什么会存在。
+
+  TCP在建立连接的时候需要握手，同理，在关闭连接的时候也需要握手。为了更直观的说明关闭连接时握手的过程，我们引用「The TCP/IP Guide」中的例子：
+
+** 四次挥手
+   [[file:../img/server/tcp_close.png]]
+
+   因为TCP连接是双向的，所以在关闭连接的时候，两个方向各自都需要关闭。先发FIN包的一方执行的是主动关闭；后发FIN包的一方执行的是被动关闭。主动关闭的一方会进入TIME_WAIT状态，并且在此状态停留两倍的MSL时长。
+
+   穿插一点MSL的知识：MSL指的是报文段的最大生存时间，如果报文段在网络活动了MSL时间，还没有被接收，那么会被丢弃。关于MSL的大小，RFC 793协议中给出的建议是两分钟，不过实际上不同的操作系统可能有不同的设置，以Linux为例，通常是半分钟，两倍的MSL就是一分钟，也就是60秒，并且这个数值是硬编码在内核中的，也就是说除非你重新编译内核，否则没法修改它：
+
+   如果每秒的连接数是一千的话，那么一分钟就可能会产生六万个TIME_WAIT。
+
+   为什么主动关闭的一方不直接进入CLOSED状态，而是进入TIME_WAIT状态，并且停留两倍的MSL时长呢？这是因为TCP是建立在不可靠网络上的可靠的协议。例子：主动关闭的一方收到被动关闭的一方发出的FIN包后，回应ACK包，同时进入TIME_WAIT状态，但是因为网络原因，主动关闭的一方发送的这个ACK包很可能延迟，从而触发被动连接一方重传FIN包。极端情况下，这一去一回，就是两倍的MSL时长。如果主动关闭的一方跳过TIME_WAIT直接进入CLOSED，或者在TIME_WAIT停留的时长不足两倍的MSL，那么当被动关闭的一方早先发出的延迟包到达后，就可能出现类似下面的问题：
+
+   旧的TCP连接已经不存在了，系统此时只能返回RST包
+   新的TCP连接被建立起来了，延迟包可能干扰新的连接
+
+   不管是哪种情况都会让TCP不再可靠，所以TIME_WAIT状态有存在的必要性。
+
+* TIME_WAIT优化
+  一个高负载的服务器会有大量的TIMEWAIT端口，而一个服务器可以使用的端口数量时有限的，如果端口被用完，客户端当然也无法连接了。
+
+  1.查看当前可使用端口范围:
+
+  cat /proc/sys/net/ipv4/ip_local_port_range => 5000	65000
+
+  2.查看当前看的TCP连接状态统计
+
+netstat -n | awk '/^tcp/ {++S[$NF]} END {for(a in S) print a, S[a]}'
+
+#+begin_verse
+LAST_ACK 14
+SYN_RECV 348
+ESTABLISHED 70
+FIN_WAIT1 229
+FIN_WAIT2 30
+CLOSING 33
+TIME_WAIT 18122
+#+end_verse
+
+** HTTP是服务器还是客户端主动断开连接
+
+   1.一些异常的连接都是服务器主动断开。
+
+下面的操作telnet百度，随便发点东西，然后被百度服务器主动断开了。
+
+#+begin_src sh
+telnet www.baidu.com 80
+Trying 180.97.33.107...
+Connected to www.a.shifen.com.
+Escape character is '^]'.
+GET /s?wd=1 HTTP/1.1
+
+Connection closed by foreign host.   => 服务器主动断开
+#+end_src
+
+2.协议中可以规定谁来断开连接
+
+#+begin_verse
+HTTP是请求-响应模式的，而有时候会以关闭连接来表示数据发送完毕，所以在其协议定义中有个字段来表示谁关闭连接。
+
+在1.1中，如果客户端在请求中使用Connection: Close ，服务器端就会在发送完响应后从容关闭连接。但是即使客户端要求使用持久连接，但是服务器也有权在响应完请求后主动关闭连接，但是要在响应头在包含Connection: Close 。
+#+end_verse
+
+
+3.默认是由服务器来断开连接。所以http服务器会有大量的TIME_WAIT端口。
+
++ 浏览器从URL中解析截取出主机名www.abc.com
++ 浏览器通过DNS，将www.abc.com转换成服务端ip地址
++ 浏览器从URL中解析截取出端口号，此处没有，使用默认的80端口
++ 浏览器建立tcp/ip连接
++ 浏览器向服务端发送http请求报文
++ 服务端向浏览器发送http响应报文
++ 服务端关闭tcp/ip连接
+
+** 两个参数的坑
+
+   你在网上搜索如何解决服务器TIME_WAIT问题，大部分人都会告诉你打开tcp_tw_reuse和tcp_tw_recycle参数，如果你照做了，那你就开始被坑了。
+   下面分别说明
+
+** tcp_tw_reuse 发起连接时服用TIME_WAIT状态端口
+
+   在主动发起连接的时候会在调用的inet_hash_connect()中会检查是否可以重用TIME_WAIT状态的套接字
+
+   1. tcp_tw_reuse选项和tcp_timestamps选项也必须同时打开,tcp_timestamps默认是打开的；
+   2. 重用TIME_WAIT的条件是收到最后一个包后超过1s。
+
+   那么问题是什么？  tcp_tw_reuse注意是主动发起方，对服务器没有效果，开了等于不开!
+   
+   除非你的服务器访问其他服务器，那么就有用了。
+
+** tcp_tw_recycle 是加速TIME-WAIT sockets回收
+
+   tcp_tw_recycle参数打开将无法处理NAT问题，不能在公网业务打开，原理如下
+
+#+begin_verse
+1. tcp_tw_recycle 打开后，内核将抛弃tcp层次的信息，只保留IP层的，这个时候只能通过IP来识别数据包。
+2. 当多个客户端通过NAT方式联网并与服务端交互时，服务端看到的是同一个IP，也就是说对服务端而言这些客户端实际上等同于一个，可惜由于这些客户端的时间戳可能存在差异，于是乎从服务端的视角看，便可能出现时间戳错乱的现象，进而直接导致时间戳小的数据包被丢弃。
+3. NAT这个东西太普遍了。。
+#+end_verse
+
+   如果你开了这个参数，用下面的方法看看你的服务器上有没有异常?
+
+#+begin_src sh
+  shell> netstat -s | grep timestamp
+  xxx packets rejects in established connections because of timestamp
+#+end_src
+
+   如果xxx packets是一个很大的数字，那么恭喜你中标了，赶紧改回来吧.
+
+   其他人惨痛的中标经历
+
+   1. [[http://blog.csdn.net/wireless_tech/article/details/6405755][【经验总结】tcp_tw_recycle参数引发的故障]]
+   2. [[http://blog.sina.com.cn/s/blog_781b0c850100znjd.html][ cp_tw_recycle和tcp_timestamps导致connect失败问题]]
+
+** tcp_max_tw_buckets
+
+   cat /proc/sys/net/ipv4/tcp_max_tw_buckets  => 262144
+
+   顾名思义就是控制TIME_WAIT总数。官网文档说这个选项只是为了阻止一些简单的DoS攻击，平常不要人为的降低它。如果缩小了它，那么系统会将多余的TIME_WAIT删除掉，日志里会显示：「TCP: time wait bucket table overflow」。
+
+   需要提醒大家的是物极必反，曾经看到有人把「tcp_max_tw_buckets」设置成0，也就是说完全抛弃TIME_WAIT，这就有些冒险了，用一句围棋谚语来说：入界宜缓。
+
+** 总结
+
+   1. tcp_tw_reuse 目前没有发现副作用，可以打开，但是只对客户端有用。
+   2. tcp_tw_recycle 无法处理NAT问题，对公网不要开!!!
+
+   官方手册对这连个参数有一段警告
+
+   It should not be changed without advice/request of technical
+
+   翻译一下:  没有技术专家建议你日狗的不要开！
+
+* 端口重用SO_REUSEADDR|SO REUSEPORT
+** SO_REUSEADDR: 案例-服务器程序编写
+   你有没有在编写服务器代码的时候，先启动一个服务器，然后关掉它，立即尝试再启动，会得到以下的错误提示:
+
+  #+begin_verse
+  绑定失败:Address already in use
+  #+end_verse
+
+  这是因为这个端口被使用后，存在TIME_WAIT状态，这时候再尝试绑定端口就会失败，所以服务器程序对listen的端口都必须要设置端口重用，
+
+#+begin_src c
+  #include <netinet/tcp.h>
+  //设置端口重用
+  int opt = 1;
+  if(setsockopt(sockfd,SOL_SOCKET,SO_REUSEADDR,&opt,sizeof(opt)) <0 ) {
+      perror("port reuse");
+      exit(1);
+   }
+
+#+end_src
+
+** SO REUSEPORT:案例-高性能dns服务器
+
+   [[http://skoo.me/system/2014/03/18/udp-server-performance/][使用reuseport和recvmmsg优化UDP服务器]]
+
+   最近刚好完成了一个DNS服务器的开发，因此积累一点对高性能UDP服务器的开发经验。如果你也遇到UDP服务器的性能不佳，远不如你的预期，也许你也可以采用本文的手段去优化一下试试。
+
+   udp不像tcp是有连接的，因此udp不能通过建立多个连接来提高对服务器的并发访问，然后我就遇到了在多核环境下通过多线程访问一个共享的udp socket时，无论如何我都无法将所有的cpu都利用起来，最后的结局当然就是无法压测出机器的瓶颈，性能也上不去。Google为了解决他们的DNS服务器性能问题，就给linux内核打了一个patch，这个patch就是SO_REUSEPORT，经过我的实战体验，reuseport对udp服务器在多核机器上的性能提升是非常大的，值得使用。
+
+   udp不像tcp是有连接的，因此udp不能通过建立多个连接来提高对服务器的并发访问，然后我就遇到了在多核环境下通过多线程访问一个共享的udp socket时，无论如何我都无法将所有的cpu都利用起来，最后的结局当然就是无法压测出机器的瓶颈，性能也上不去。Google 为了解决他们的DNS服务器性能问题，就给linux内核打了一个patch，这个patch就是SO_REUSEPORT，经过我的实战体验，reuseport对udp服务器在多核机器上的性能提升是非常大的，值得使用。
+
+   _REUSEPORT_ 的目的如其名，就是为了让多线程/多进程服务器的每个线程都listen同一个端口，并且最终每个线程拥有一个独立的socket，而不是所有线程都访问一个socket。没有reuseport这个patch的话，这么做的后果就是服务器会报出一个类似“地址/端口被占用的”错误信息。在没有reuseport的时候，客户端发给udp服务器的每个包都是被投递到唯一的一个socket上了，使用reuseport后，服务器有了多个socket，那么客户端发过来的包投递到哪个socket上呢？linux内核采用了一个四元组<客户端ip，客户端port，服务器ip，服务器port>的hash来进行包的分发，这样做至少有两个目的：一是保证同一个客户度过来的包都被递送到同一个socket上；二是在客户端量足够的时候，基本可以均衡到所有的socket上。在使用reuseport的时候需要注意：客户端太少的话，是很难压测出服务器的真实性能的，因为reuseport使用的是hash值来分发请求到socket上，所以可能出现每个socket上接收包不均衡的情况，使用较多的客户端机器来压测服务器，目的就是让每个socket尽可能的均衡。
+
+   使用reuseport后，udp服务器的并发能力大幅度的提高了，这个时候还可以继续使用recvmmsg来继续降低系统调用的开销。recvmmsg是一个批量接口，它可以从socket里一次读出多个udp数据包，不像recvfrom那样一次只能读一个。如果客户端多、请求量大的话，recvmmsg的批量读就很有优势了。不过，使用recvmmsg一定要清楚，它从socket里一次读出的所有包不一定是来自同一个客户端的，大多数情况应该都是来自不同客户端的。这不像tcp，从同一个连接里读到的数据一定是同一个客户端。我们的一个同学在使用recvmmsg的时候，就犯了这个错误，误认为一次收取的数据包都是同一个客户端的，最后将所有的应答都发给了同一个客户端，其他的客户端全都超时了。高性能服务器开发中，系统调用是昂贵的，所以没事就可以用strace看看一个请求周期内有哪些系统调用，尽一切可能去优化掉他们。
+
+* 如何优雅的关闭连接:SO_LINGER
+** 参数说明
+
+默认行为:此选项指定函数close对面向连接的协议如何操作（如TCP）。内核缺省close操作是立即返回，如果有数据残留在套接口缓冲区中则系统将试着将这些数据发送给对方。
+
+参数情况
+
+#+begin_src c
+typedef struct linger {
+  u_short l_onoff;    //开关，零或者非零
+  u_short l_linger;   //优雅关闭最长时限
+} linger;
+
+struct linger lin;
+lin.l_onoff = 1;
+lin.l_linger = 5;
+if (setsockopt(clntfd, SOL_SOCKET, SO_LINGER, &lin, sizeof(lin)) < 0) {
+    continue;
+}
+
+#+end_src
+
+| l_onoff | l_linger | closesocket行为                                                    | 发送队列                                       | 底层行为                                                            |
+| 零      | 忽略     | 立即返回。                                                         | 保持直至发送完成。                             | 系统接管套接字并保证将数据发送至对端。                              |
+| 非零    | 零       | 立即返回。                                                         | 立即放弃。                                     | 直接发送RST包，自身立即复位，不用经过2MSL状态。对端收到复位错误号。 |
+| 非零    | 非零     | 阻塞直到l_linger时间超时或数据发送完成。(套接字必须设置为阻塞状态) | 在超时时间段内保持尝试发送，若超时则立即放弃。 | 超时则同第二种情况，若发送完成则皆大欢喜。                          |
+
+并不被推荐使用，大多数情况下我们推荐使用默认的关闭方式（即下方表格中的第一种情况）。
+
+** 是否能解决发送数据包给对方立即关闭连接，导致对方接受剩余数据异常的问题？
+
+   不能解决，SO_LINGER只能保证数据发送成功，但是不能保证对方已经收到数据，如果需要确定对方收到数据后再关闭，有两种方法。
+
+   1. 应用层判断:应用层单独做数据包，在确定对方收到最后的包，并且返回一个特殊的数据包后，再关闭连接。
+   2. 关闭方先调用shutdown(SHUT_WR)，然后开始read直至返回0,再Close.
+
+   参考文章
+
+  1. [[http://www.longxk.com/posts/2011/11/17/close-socket-correctly/][正确地关闭Socket]]
+  2. [[http://www.360doc.com/content/10/1105/13/3700464_66816888.shtml][SO_LINGER和shutdown]]
+
+* shutdown和close的区别
+* nagle算法-[[http://baike.baidu.com/view/2468335.htm][百度百科]]
+** 简介
+
+   Nagle算法是以他的发明人John Nagle的名字命名的，它用于自动连接许多的小缓冲器消息；这一过程（称为nagling）通过减少必须发送包的个数来增加网络软件系统的效率。Nagle算法于1984年定义为福特航空和通信公司IP/TCP拥塞控制方法，这使福特经营的最早的专用TCP/IP网络减少拥塞控制，从那以后这一方法得到了广泛应用。Nagle的文档里定义了处理他所谓的小包问题的方法，这种问题指的是应用程序一次产生一字节数据，这样会导致网络由于太多的包而过载（一个常见的情况是发送端的"糊涂窗口综合症(Silly Windw Syndrome)"）。从键盘输入的一个字符，占用一个字节，可能在传输上造成41字节的包，其中包括1字节的有用信息和40字节的首部数据。这种情况转变成了4000%的消耗，这样的情况对于轻负载的网络来说还是可以接受的，但是重负载的福特网络就受不了了，它没有必要在经过节点和网关的时候重发，导致包丢失和妨碍传输速度。吞吐量可能会妨碍甚至在一定程度上会导致连接失败。Nagle的算法通常会在TCP程序里添加两行代码，在未确认数据发送的时候让发送器把数据送到缓存里。任何数据随后继续直到得到明显的数据确认或者直到攒到了一定数量的数据了再发包。尽管Nagle的算法解决的问题只是局限于福特网络，然而同样的问题也可能出现在ARPANet。这种方法在包括因特网在内的整个网络里得到了推广，成为了默认的执行方式，尽管在高互动环境下有些时候是不必要的，例如在客户/服务器情形下。在这种情况下，nagling可以通过使用TCP_NODELAY 套接字选项关闭。
+
+** Nagle算法的规则（可参考tcp_output.c文件里tcp_nagle_check函数注释）
+
+   Nagle算法的基本定义是任意时刻，最多只能有一个未被确认的小段。 所谓“小段”，指的是小于MSS尺寸的数据块，所谓“未被确认”，是指一个数据块发送出去后，没有收到对方发送的ACK确认该数据已收到。
+
+  1. 如果包长度达到MSS，则允许发送；
+  2. 如果该包含有FIN，则允许发送；
+  3. 设置了TCP_NODELAY选项，则允许发送；
+  4. 未设置TCP_CORK选项时，若所有发出去的小数据包（包长度小于MSS）均被确认，则允许发送；
+  5. 上述条件都未满足，但发生了超时（一般为200ms），则立即发送。
+
+  Nagle算法只允许一个未被ACK的包存在于网络，它并不管包的大小，因此它事实上就是一个扩展的停-等协议，只不过它是基于包停-等的，而不是基于字节停-等的。Nagle算法完全由TCP协议的ACK机制决定，这会带来一些问题，比如如果对端ACK回复很快的话，Nagle事实上不会拼接太多的数据包，虽然避免了网络拥塞，网络总体的利用率依然很低。
+
+** TCP_NODELAY
+
+   默认情况下，发送数据采用Nagle 算法。这样虽然提高了网络吞吐量，但是实时性却降低了，在一些交互性很强的应用程序来说是不允许的，使用TCP_NODELAY选项可以禁止Nagle 算法。
+
+   此时，应用程序向内核递交的每个数据包都会立即发送出去。需要注意的是，虽然禁止了Nagle 算法，但网络的传输仍然受到TCP确认延迟机制的影响。
+
+** TCP_CORK 选项
+　　
+   所谓的CORK就是塞子的意思，形象地理解就是用CORK将连接塞住，使得数据先不发出去，等到拔去塞子后再发出去。设置该选项后，内核会尽力把小数据包拼接成一个大的数据包（一个MTU）再发送出去，当然若一定时间后（一般为200ms，该值尚待确认），内核仍然没有组合成一个MTU时也必须发送现有的数据（不可能让数据一直等待吧）。
+
+   然而，TCP_CORK的实现可能并不像你想象的那么完美，CORK并不会将连接完全塞住。内核其实并不知道应用层到底什么时候会发送第二批数据用于和第一批数据拼接以达到MTU的大小，因此内核会给出一个时间限制，在该时间内没有拼接成一个大包（努力接近MTU）的话，内核就会无条件发送。也就是说若应用层程序发送小包数据的间隔不够短时，TCP_CORK就没有一点作用，反而失去了数据的实时性（每个小包数据都会延时一定时间再发送）。
+
+
+*** 应用场景
+
+    这个参数默认当然时关闭的了。。。
+
+    假设应用程序使用sendfile()函数来转移大量数据。应用协议通常要求发送某些信息来预先解释数据，这些信息其实就是报头内容。典型情况下报头很小，而且套接字上设置了TCP_NODELAY。有报头的包将被立即传输，在某些情况下（取决于内部的包计数器），因为这个包成功地被对方收到后需要请求 对方确认。这样，大量数据的传输就会被推迟而且产生了不必要的网络流量交换。
+
+    但是，如果我们在套接字上设置了TCP_CORK（可以比喻为在管道上插入“塞子”）选项，具有报头的包就会填补大量的数据，所有的数据都根据大小自动地 通过包传输出去。当数据传输完成时，最好取消TCP_CORK 选项设置给连接“拔去塞子”以便任一部分的帧都能发送出去。这同“塞住”网络连接同等重要。
+
+    一般的使用方法:
+
+#+begin_src c
+setsockopt (fd, SOL_TCP, TCP_CORK, &on, sizeof (on)); /* cork */
+write (fd, …);
+fprintf (fd, …);
+sendfile (fd, …);
+write (fd, …);
+sendfile (fd, …);
+…
+on = 0;
+setsockopt (fd, SOL_TCP, TCP_CORK, &on, sizeof (on)); /* 拔去塞子 */
+#+end_src
+
+*** 其他趣味
+
+    Apache HTTPD是因特网上最流行的Web服务器，它的所有套接字就都设置了TCP_NODELAY选项，而且其性能也深受大多数用户的满意。这是为什么呢？答 案就在于实现的差别之上。由BSD衍生的TCP/IP协议栈（值得注意的是FreeBSD）在这种状况下的操作就不同。当在TCP_NODELAY 模式下提交大量小数据块传输时，大量信息将按照一次write()函数调用发送一块数据的方式发送出去。然而，因为负责请求交付确认的记数器是面向字节而 非面向包（在Linux上）的，所以引入延迟的概率就降低了很多。结果仅仅和全部数据的大小有关系。而 Linux 在第一包到达之后就要求确认，FreeBSD则在进行如此操作之前会等待好几百个包。
+
+** Nagle算法与CORK算法区别
+
+   Nagle算法和CORK算法非常类似，但是它们的着眼点不一样，Nagle算法主要避免网络因为太多的小包（协议头的比例非常之大）而拥塞，而CORK算法则是为了提高网络的利用率，使得总体上协议头占用的比例尽可能的小。如此看来这二者在避免发送小包上是一致的，在用户控制的层面上，Nagle算法完全不受用户socket的控制，你只能简单的设置TCP_NODELAY而禁用它，CORK算法同样也是通过设置或者清除TCP_CORK使能或者禁用之，然而Nagle算法关心的是网络拥塞问题，只要所有的ACK回来则发包，而CORK算法却可以关心内容，在前后数据包发送间隔很短的前提下（很重要，否则内核会帮你将分散的包发出），即使你是分散发送多个小数据包，你也可以通过使能CORK算法将这些内容拼接在一个包内，如果此时用Nagle算法的话，则可能做不到这一点。
+* 糊涂窗口综合症
+  fewfe
+* 延迟ACK
+
+  [[http://blog.csdn.net/turkeyzhou/article/details/6764389][Linux Tcp 延迟确认问题]] 这么牛逼的文章。建议直接点击，尊重原创。
+
+** 延迟ACK是什么?
+
+   TCP在收到每一个数据包时，都会发送一个ACK报文给对方，用以告诉对方"我接收到你刚才发送的数据了"。并且会在报文的确认号字段中标志希望接收到的数据包。但是，如你所想，如果为每一个接收到的报文都发送一个ACK报文，那将会增加网络的负担。于是，为了解决这个问题，delayed ack被提出。也就是说，实现了delayed ack的TCP，并不见得会对每一个接收到的数据包发送ACK确认报文。
+
+  实际情况是，TCP延迟发送这个ACK。延迟多久？<TCP/IP详解>中说的是200ms，在RFC1122中说的则是500ms。delayed ack有时候还会附加到数据报文段一起发送，如果在延迟时间内有报文段要发送的话，如果没有，那么当延迟时间到时，就单独发送ACK。
+
+  在另一份文档中，作者讲到delayed ack的好处：
+
+1. to avoid the silly window syndrome;
+2. to allow ACKs to piggyback on a reply frame if one is ready to go when the stack decides to do the ACK;
+3. to allow the stack to send one ACK for several frames, if those frames arrive within the delay period.
+4. 所谓的糊涂窗口综合症(别人都这样翻译的，似乎有点搞笑:D)
+5. 将ACK与将要发送的数据报文一起发送
+6. 一个ack确认多个报文段，如果这几个报文段在延迟时间内到达
+
+   延迟ACK是linux内核对交互式的socket自动开启的.
+
+** 解决方法:quick_ack
+
+#+begin_src c
+    for (int i = 0; i < N; i++) {
+        recv(fd, rcvBuf, 132, 0);
+        setsockopt(fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){1}, sizeof(int));
+    }
+#+end_src
+
+
+   TCP_QUICKACK需要在每次调用recv后重新设置
+
+** 交互式的socket
+
+   linux下socket有一个pingpong属性来表明当前链接是否为交互数据流，如其值为1，则表明为交互数据流，会使用延迟确认机制。但是pingpong这个值是会动态变化的。
+   如果当前时间与最近一次接受数据包的时间间隔小于计算的延迟确认超时时间，则重新进入交互数据流模式。也可以这么理解：延迟确认机制被确认有效时，会自动进入交互式。
+* 滑动窗口问题
+  xfefe
+* 拥塞算法流程

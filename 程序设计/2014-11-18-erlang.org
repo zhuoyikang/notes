@@ -1,0 +1,192 @@
+#+SETUPFILE: ../css/level-1.orgcss
+#+TITLE: Erlang学习笔记
+
+[[http://blog.csdn.net/erlib/article/details/40743849][Erlang前人挖坑，后人还要进坑]]
+
+
+* erlang top
+
+
+* 随机数种子
+
+在生成随机数过程中一直使用:random:seed(erlang:now()).
+
+erlang:now()是可以一直递增的数，从不重复，但是不适合用于随机算法，最好使用下面这种：
+
+#+begin_src erlang
+-spec get_random_num(integer()) -> integer().
+get_random_num(Max) ->
+    <<A:32, B:32, C:32>> = crypto:rand_bytes(12),
+    random:seed({A,B,C}),
+    random:uniform(Max).
+#+end_src
+
+* 高端链接
+
+[[http://wqtn22.iteye.com/blog/1820587][erlang程序优化点的总结（持续更新）]]
+
+* Erlang启动参数
+
+http://blog.csdn.net/zhangxinrun/article/details/6963700
+
+erlang启动参数有3种：emulator flags, flags 和plain arguments。
+
+  + emulator flags 是以“+”开头的，用来控制模拟器的行为
+  + flags 是以“-”开头的， 是erlang运行时系统的参数，可以用init:get_argument/1获得。
+  + plain arguments 普通参数，在第一个flag参数前，或在-- flag之后，-extra后的参数都是普通参数。
+
+  boot File 指定启动使用的boot文件，默认是$ROOT/bin/start.boot，在这个目录下还有start_clean.boot，start_sasl.boot。如果需要sasl的话，就-boot start_sasl；
+
+  erl -eval '{X,Y,Z}' = now(), random:seed(X,Y,Z).'  
+
+* ets操作
+
+#+begin_src erlang
+All=ets:select(burning_table_90, [{{'$1', '$2'}, [], ['$2']}]).
+#+end_src
+
+
+
+* 跟踪进程堆栈
+
+#+begin_src erlang
+  etop:start([{output, text}, {interval, 1}, {lines, 20}, {sort, runtime}]).
+0..0
+
+(server_node_gl3x@127.0.0.1)12> erlang:process_info(pid(0,403,0), current_stacktrace).
+{current_stacktrace,[{gen,do_call,4,
+                          [{file,"gen.erl"},{line,168}]},
+                     {gen_server,call,3,[{file,"gen_server.erl"},{line,208}]},
+                     {rpc,do_call,3,[{file,"rpc.erl"},{line,336}]},
+                     {mnesia,do_dirty_rpc,5,[{file,"mnesia.erl"},{line,1807}]},
+                     {cluster_server,get_process,2,
+                                     [{file,"cluster_server.erl"},{line,76}]},
+                     {ctl,reply_to,2,[{file,"src/ctl.erl"},{line,129}]},
+                     {lists,foreach,2,[{file,"lists.erl"},{line,1337}]},
+                     {model_map_block_sync,broadcast,2,
+                                           [{file,"src/map_collection/model_map_block_sync.erl"},
+                                            {line,338}]}]}
+(server_node_gl3x@127.0.0.1)13>
+
+erlang:process_info(pid(0,61,886), current_stacktrace).
+rp(erlang:process_info(pid(0,61,886), backtrace)).
+
+0..0
+0..0
+ erlang:process_info(pid(0,408,0), current_stacktrace).
+
+erlang:process_info(pid(0,256,0),current_stacktrace).
+
+erlang:process_info(pid(0,,0)).
+
+
+#+end_src
+
+
+
+mysql -h10.0.193.220 -ugl001 -pgl10Wdaodao
+* Erlang分布式网络相关参数设置说明
+
+erlang分布式节点，对外部的节点给予最大的信任，只需要通过一个相同的cookie串认证过后，外部节点可以在本节点运行任何程序，这样在一个纯局 域网的环境中是没有任何问题的，不过，如果放在internet上，就需要配置一些网络参数，或同时配置相应的防火墙策略以提高安全性。
+
+分布式网络相关的参数
+
+#+begin_src bash
+inet_dist_use_interface ipaddress
+inet_dist_listen_min Min
+inet_dist_listen_max Max
+#+end_src
+上面三个参数指定，一个分布式节点起动时，监听的接口IP和使用端口范围。当有一台机器有多个接口时，可以用inet_dist_use_interface指定监听的接口，Min和Max限定它监听的端口范围。
+
+下面使用的例子。
+
+运行两个节点：
+
+#+begin_src bash
+> erl -sname p2 -kernel inet_dist_use_interface \{192,168,253,56\} inet_dist_listen_min 2000 inet_dist_listen_max 2050
+> erl -sname p2 -kernel inet_dist_use_interface \{192,168,253,56\} inet_dist_listen_min 2000 inet_dist_listen_max 2050
+#+end_src
+
+查看监听的端口：
+
+#+begin_src bash
+> netstat -an | grep LISTEN
+tcp 0 0 192.168.253.56:2000 0.0.0.0:* LISTEN
+tcp 0 0 192.168.253.56:2001 0.0.0.0:* LISTEN
+#+end_src
+
+这样，通过这几个参数，可以增强安全性。比如，你将节点都监听在内网上，这样外网上是看不到这些节点的。如果只有一个接口，你也可以通过配置防火墙规则限制来源IP及端口范围。
+* Ulimit参数导致Erlang启动占用过多内存
+** 问题说明
+  
+作为一个服务器人ulimit参数是常常会修改的，但是这个数字也不能修改的太大。
+
+最近一台机器上出现了一个裸的erlang启动后直接暂用了500M内存的情况。
+
+#+begin_src sh
+erl
+erlang:memory().
+[{total,567657120},
+ {processes,1326121},
+ {processes_used,1326106},
+ {system,566330999},
+ {atom,194289},
+ {atom_used,169885},
+ {binary,1325064},
+ {code,3648079},
+ {ets,239656}]
+2>
+#+end_src
+
+
+可以看到大部分内存都被system占用，如果内存不够，再启动新的erl会直接报错
+
+#+begin_src sh
+erl
+ll_alloc: Cannot allocate 503316480 bytes of memory (of type "port_tab").
+#+end_src
+
+
+经研究，目前系统的ulimit -n参数为
+
+#+begin_src sh
+ulimit -n
+1000000
+#+end_src
+
+将其修改为65535之后，再启动erl就只占用40M内存了。
+
+#+begin_src sh
+ulimit -SHn 65535
+#+end_src
+
+
+推测为erlang会预先为其能使用的fd分配内存空间，所以这个值不宜设置太大。
+mission complete
+
+
+
+** Ulimit修改方法
+
+
+
+linux下用ulimit设置连接数最大值，默认是1024.
+在高负载下要设置为更高，但最高只能为65535.
+
+ulimit -SHn 65535
+
+ulimit只能做临时修改，重启后失效。
+可以加入
+ulimit -SHn 65535
+到 /etc/rc.local 每次启动启用。
+
+终极解除 Linux 系统的最大进程数和最大文件打开数限制：
+vim /etc/security/limits.conf
+# 添加如下的行
+
+#+begin_verse
+ * soft nproc 11000
+ * hard nproc 11000
+ * soft nofile 655350
+ * hard nofile 655350
+#+end_verse

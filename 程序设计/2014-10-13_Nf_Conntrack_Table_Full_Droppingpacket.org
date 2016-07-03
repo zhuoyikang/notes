@@ -1,0 +1,153 @@
+#+SETUPFILE: ../css/level-1.orgcss
+#+TITLE: nf_conntrack: table full, dropping packet.
+
+[[http://jaseywang.me/2012/08/16/%E8%A7%A3%E5%86%B3-nf_conntrack-table-full-dropping-packet-%E7%9A%84%E5%87%A0%E7%A7%8D%E6%80%9D%E8%B7%AF/][原文链接-解决-nf_conntrack-table-full-dropping-packet-的几种思路]]
+
+* 为什么出现nf_conntrack: table full, dropping packet.
+
+就要从NAT说起了。NAT（Network Address Translation，网络地址转换）是将IP数据报报头的IP地址转化成另外一个IP地址的过程，主要用来实现局域网内的机器访问公共网络（俗称外网）的功能。公共IP地址是指在因特网上全球唯一的IP地址，RFC 1918协议还为局域网预留出了三个IP不会在公网上进行分配的地址块：
+
+
+#+begin_verse
+10.0.0.0～10.255.255.255
+172.16.0.0～172.31.255.255
+192.168.0.0～192.168.255.255
+#+end_verse
+
+
+这些IP地址就可以用来分配给局域网上的各种设备，这些设备在访问外网时，就需要通过一台NAT服务器进行路由转换，通常情况下，路由器就兼备了这样一个功能。除了路由器，也可以配置linux服务器实现NAT功能。ip_conntrack就是linux NAT的一个跟踪连接条目的模块，ip_conntrack模块会使用一个哈希表记录 tcp 通讯协议的 established connection记录，当这个哈希表满了的时候，便会导致nf_conntrack: table full, dropping packet错误。
+
+
+** 查看当前的的conntrack_max
+
+#+begin_src bash
+cat /proc/sys/net/netfilter/nf_conntrack_max
+#+end_src
+
+
+** 查看当前设置的可以跟踪的hash表大小
+
+#+begin_src bash
+sysctl net.netfilter.nf_conntrack_buckets
+cat /proc/sys/net/netfilter/nf_conntrack_buckets
+#+end_src
+
+
+** 查看当前跟踪的链接数：
+
+#+begin_src bash
+wc -l /proc/net/ip_conntrack
+#+end_src
+
+
+** 查出目前 ip_conntrack 的排名：
+
+#+begin_src bash
+cat /proc/net/ip_conntrack | cut -d ' ' -f 10 | cut -d '=' -f 2 | sort | uniq -c | sort -nr | head -n 10
+#+end_src
+
+* 如何计算合适的max_conntrack和其hash_size
+
+对于 CONNTRACK_MAX，其计算公式：
+
+#+begin_src c
+CONNTRACK_MAX = RAMSIZE (in bytes) / 16384 / (ARCH / 32)
+#+end_src
+
+比如一个64位48G的机器可以同时处理 48*1024^3/16384/2 = 1572864 条netfilter连接。对于大于1G内存的系统，默认的CONNTRACK_MAX是65535。
+
+对于HASHSIZE，默认的有这样的转换关系：CONNTRACK_MAX = HASHSIZE * 8
+
+这表示每个链接列表里面平均有 8 个 conntrack 条目。其真正的计算公式如下：
+
+#+begin_src c
+HASHSIZE = CONNTRACK_MAX / 8 = RAMSIZE (in bytes) / 131072 / (ARCH / 32)
+#+end_src
+
+比如一个 64 位 48G 的机器可以存储 48*1024^3/131072/2 = 196608 的buckets(连接列表)。对于大于 1G 内存的系统，默认的 HASHSIZE 是 8192。
+
+如何修改这两个参数
+
+#+begin_src bash
+sudo su -c "echo 100000 > /proc/sys/net/netfilter/nf_conntrack_max"
+sudo su -c "echo 50000 > /proc/sys/net/netfilter/nf_conntrack_buckets"
+#+end_src
+
+还可以缩短 timeout 的值：
+#+begin_src bash
+sudo su -c "echo 600 > /proc/sys/net/ipv4/netfilter/ip_conntrack_tcp_timeout_established"
+#+end_src
+
+
+我服主网关设置
+| nf_conntrack_buckets | nf_conntrack_max |
+|                16384 |           655360 |
+
+* 内核相关参数
+
+
+| 参数                                                         | 描述                                                                                                 | 影响                                                                                                               |
+| /proc/sys/net/netfilter/nf_conntrack_max                     | 默认65536，同时这个值和你的内存大小有关，如果内存128M，这个值最大8192，1G以上内存这个值都是默认65536 | 这个值决定了你作为网关的工作能力上限，所有局域网内通过这台网关对外的连接都将占用一个连接， 设置为 PC * 100 就OK了。    |
+| /proc/sys/net/netfilter/nf_conntrack_buckets                 | 存储 conntrack 条目哈希表的大小                                                            | 这个参数与nf_conntrack_max有关，建议设在为  (_conntrack  * 8)??疑问                                          |
+| /proc/sys/net/netfilter/nf_conntrack_tcp_timeout_established | 已建立的tcp连接的超时时间。默认432000，也就是5天，建议设置为2个小时      | 这个值过大将导致一些可能已经不用的连接常驻于内存中，占用大量链接资源，从而可能导致NAT ip_conntrack: table full的问题。 |
+| /proc/sys/net/ipv4/ip_local_port_range                       | 本地开放端口范围，默认：32768-61000，建议修改为：11000-61000                      | 这个范围同样会间接限制NAT表规模                                                                                        |
+| /proc/sys/net/core/netdev_max_backlog                        | 进入包的最大设备队列，对网关而言可调整到1000                                                         | 这个参数与性能没有关系，但可以平衡下短暂的突发报文                                                                     |
+| ulimit -HSn 65536                                            | 一般不用修改这个参数，当出现table full错误时可以修改为更大的值                                       |                                                                                                                        |
+* 其他文章
+
+[[http://storysky.blog.51cto.com/628458/243835][本文出自 “story的天空” 博客]]
+
+刚上线不久的一台服务器，晚上高峰时有很多客户反映连不上服务器，通过在本地测试发现有的连接可以连上但有的不行，赶紧连上服务器查看日志，发现大量如下错误...
+
+#+begin_src bash
+kernel: ip_conntrack: table full, dropping packet.
+kernel: printk: 1 messages suppressed.
+kernel: ip_conntrack: table full, dropping packet.
+kernel: printk: 2 messages suppressed.
+kernel: ip_conntrack: table full, dropping packet.
+kernel: printk: 1 messages suppressed.
+#+end_src
+
+ip_conntrack 这个东西是连接跟踪数据库(conntrack database)，代表NAT机器跟踪连接的数目（不过只要打开iptables就会开始跟踪）如果这个东西满了结果可想而知
+赶紧查看当前的值发现很快就能到2万多
+
+#+begin_src bash
+wc -l /proc/net/ip_conntrack
+23722 /proc/net/ip_conntrack
+#+end_src
+
+看看最大值限制
+
+#+begin_src bash
+cat /proc/sys/net/ipv4/netfilter/ip_conntrack_max
+65536
+#+end_src
+
+访问稍大一点就会突破这个值，保留时间是多久？
+
+#+begin_src bash
+cat /proc/sys/net/ipv4/netfilter/ip_conntrack_tcp_timeout_established
+432000
+#+end_src
+
+默认是5天，没必要这么久，先临时调大看看效果
+
+#+begin_src bash
+echo 655350 > /proc/sys/net/ipv4/netfilter/ip_conntrack_max
+echo 10800 > /proc/sys/net/ipv4/netfilter/ip_conntrack_tcp_timeout_established
+#+end_src
+
+改完后观察了一段时间，发现服务器连接正常，没有再发生类似情况
+
+修改/etc/sysctl.conf
+
+#+begin_src bash
+net.ipv4.netfilter.ip_conntrack_max = 655360
+net.ipv4.netfilter.ip_conntrack_tcp_timeout_established = 10800
+#+end_src
+
+sysctl -p 立即生效
+
+OK问题排除，在上线前没有估计好服务器的访问量，从而忽略了对一些内核参数的修改。这点需要我以后多注意。
+
+

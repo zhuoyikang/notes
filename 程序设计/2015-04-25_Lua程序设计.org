@@ -1,0 +1,114 @@
+#+SETUPFILE: ../css/level-1.orgcss
+#+TITLE: Lua:程序设计读书笔记
+
+http://www.lua.org/
+* 命令行使用
+
+  + lua -i prog: 执行完 prog后进入交互模式
+  + lua -e "print(\"good\")"  直接执行
+  + lua -l 加载库文件  lua -i -l a -e "x=10"
+  + lua -i -e "_PROMPT='lua'" 修改命令提示符
+  + LUA_INIT 在解释器执行其参数前，会先查找一个名为LUA_INIT的环境变量，如果找到了，并且其内容为'@文件名'，那么解释器会先执行这个文件；如果不是，解释器就假设其为lua代码并执行，所以你可以用它来干很多事:修改命令提示符，定义函数，对函数进行改名和删除，预先加载一个程序爆
+
+* DONE 词法规范
+CLOSED: [2016-07-03 Sun 09:53]
+
+** 变量
+   避免使用_VERSION等下划线开头的全大写字母遍历，lua一般将此类标示符用作特殊作用。
+
+** 注释
+  非主流注释:
+
+  #+begin_src lua
+--[[
+fwefe
+--]]
+
+--fewfe
+  #+end_src
+
+** 全局变量
+
+   #+begin_src lua
+print b
+b =10  --全局
+print b
+b = nil  --取消全局变量
+   #+end_src
+
+   #+RESULTS:
+
+   通过特殊全局变量arg来处理命令行参数，脚本名称位于参数0。
+
+#+begin_src sh
+
+   lua -e "sin=math.sin" script a b
+   + arg[-3] = "lua"
+   + arg[-2] = "-e"
+   + arg[-1] = "sin=math.sin"
+   + arg[0] = "script"
+   + arg[1] = "a"
+   + arg[2] = "b"
+
+#+end_src
+
+* 类型与值
+
+  8种基础类型 =>
+
+  + nil:空
+  + boolean: 布尔
+  + number: 数字
+  + string: 字符串
+  + userdata: 自定义数据
+  + function: 函数
+  + thread: 线程
+  + table: 表
+
+#+begin_src lua
+print (type("fwefee"))   -- string
+#+end_src
+
+#+RESULTS:
+
+* 表达式
+  and or 短路求值
+  x = x or v   如果x为nil，则为其赋予一个默认值v
+  max = (x>y) and x or y  三目运算符。
+
+  字符串连接 "He" .. "World"
+
+  table构造式，下标从1开始。。
+
+#+begin_src lua
+days = {"a", "b", "c"}  => days
+days[1] => "a"
+
+a = {x=10, y=20}
+a ={}
+a.x =10
+a.y=20
+a.x =nil
+#+end_src
+
+
+* 代码片段
+** io输出
+
+#+begin_src lua
+  print("test")
+#+end_src
+
+** 条件分支
+
+#+begin_src lua
+function fac (n)
+   if n <= 1 then
+      return 1
+   else
+      return fac(n-1) + fac(n-2)
+   end
+end
+
+print(fac(10))
+#+end_src

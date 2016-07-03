@@ -1,0 +1,103 @@
+* 安装命令介绍
+#+begin_src sh
+
+# 安装
+brew install rabbitmq
+
+# 修改环境变量
+增加 /usr/local/sbin/
+
+# 启动
+rabbitmq-server
+
+# 检查状态
+rabbitmqctl status
+
+# 检查系统限制
+launchctl limit
+
+# 列出所有的exchange
+rabbitmqctl list_exchanges
+
+# 列出所有的bind
+rabbitmqctl list_bindings
+
+# 列出所有的queue.
+rabbitmqctl list_queues name messages_ready messages_unacknowledged
+
+# 集群状态
+rabbitmqctl cluster_status
+
+#+end_src
+
+* 集群操作
+
+非常全的文章:http://my.oschina.net/moooofly/blog/93548
+官网 http://www.rabbitmq.com/clustering.html
+
+
+单机上如何进行启动多个RabbitMQ
+
+#+begin_src sh
+RABBITMQ_NODE_PORT=5672 RABBITMQ_SERVER_START_ARGS="-rabbitmq_stomp tcp_listeners [61614] -rabbitmq_management listener [{port,15672}] -rabbitmq_mqtt tcp_listeners [1883]"  RABBITMQ_NODENAME=rabbit rabbitmq-server -detached
+RABBITMQ_NODE_PORT=5673 RABBITMQ_SERVER_START_ARGS="-rabbitmq_stomp tcp_listeners [61615] -rabbitmq_management listener [{port,15673}] -rabbitmq_mqtt tcp_listeners [1884]"  RABBITMQ_NODENAME=hare rabbitmq-server -detached
+
+rabbitmqctl -n hare stop_app
+rabbitmqctl -n hare reset
+rabbitmqctl -n hare join_cluster rabbit@`hostname -s`
+rabbitmqctl -n hare cluster_status
+rabbitmqctl -n hare start_app
+
+# 如何连接上后台的rabbit.
+erl -sname mash  -remsh rabbit@`hostname -s`
+#+end_src
+
+* 性质总结
+
+1. 通过mnesia维护全局信息。
+2. Q只需要有一个, worker可以多一点.
+3. 如果连接的节点挂掉，需要自动重连其他节点恢复业务。
+
+* 基本概念
+
+http://www.tuicool.com/articles/IrEFnq
+http://www.sxt.cn/u/4678/blog/5516
+
+* 一些经验之谈
+** 使用RabbitMQ做的一些工作及经验教训: 刘浩de技术博客
+
+提供c++客户端时，限制使用接口，只保留了publish\consume\ack，保证业务使用时可以有极低的学习成本；
+consume时预取参数的大小对consume性能影响很大，具体可参见官方博客；
+队列HA的代价非常高，特别是对带宽的占用，有限制的使用HA，且只提供两备份即可；
+磁盘也可能形成瓶颈，如果单台机器队列很多，确认只在必要时才使用duration，避免把磁盘跑满；
+队列的消息大量累积后，发送和消费速度都会受到影响，导致服务进一步恶化，采用的方法是，额外的脚本监控每个队列的消息数，超过限额会执行purge操作，简单粗暴但是有效的保证了服务稳定；
+限制单条消息大小，我们的限制是128k，消息队列只走消息，其他交由存储去做；
+用iptables适当的限制连接；
+
+** Rabbitmq堆积消息后生产速率降低的问题分析及应对措施
+
+在rabbitmq没有消费者的情况下，生产者持续向mq发消息，使得消息在mq中大量堆积，发送速率不受影响，但当有新的消费者连接上mq并开始接收消息时，生产速率大幅降低
+
+* 性能相关
+
+比较全面的入口: http://blog.csdn.net/linsongbin1/article/details/47781187
+
+各项MQ对比
+http://www.cnblogs.com/amityat/archive/2011/08/31/2160293.html -> zeromq巨兽。
+http://blog.x-aeon.com/2013/04/10/a-quick-message-queue-benchmark-activemq-rabbitmq-hornetq-qpid-apollo/ 更加细的对比
+淘宝的RabbitMQ选择：http://www.docin.com/p-462677246.html
+
+redisMQ和RabbitMQ的对比
+http://my.oschina.net/ydsakyclguozi/blog/417087
+
+* 关键看我
+
+Exchange类型:
++ fanout、fanout类型的Exchange路由规则非常简单，它会把所有发送到该Exchange的消息路由到所有与它绑定的Queue中。
++ direct、direct类型的Exchange路由规则也很简单，它会把消息路由到那些binding key与routing key完全匹配的Queue中。
++ topic、前面讲到direct类型的Exchange路由规则是完全匹配binding key与routing key，但这种严格的匹配方式在很多情况下不能满足实际业务需求。topic类型的Exchange在匹配规则上进行了扩展，它与direct类型的Exchage相似，也是将消息路由到binding key与routing key相匹配的Queue中，但这里的匹配规则有些不同，它约定：
+
+好看的图和文章
+
+http://hwcrazy.com/34195c9068c811e38a44000d601c5586/be62fc2668c811e3adba000d601c5586/
+http://www.diggerplus.org/archives/3110

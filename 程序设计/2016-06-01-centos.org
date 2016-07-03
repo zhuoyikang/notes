@@ -1,0 +1,83 @@
+* 查看CentOS版本方法  
+lsb_release -a
+cat /etc/redhat-release
+
+uname -r
+uname -a
+
+* 安装postgresql
+
+https://wiki.postgresql.org/wiki/YUM_Installation
+
+搜索postgres相关包
+
+yum list postgres*
+
+systemctl enable postgresql-9.4
+systemctl start postgresql-9.4
+
+yum install postgresql94-server
+yum install postgis2_94
+
+sudo yum install postgis2_94
+
+su - postgres
+psql
+
+
+http://www.postgresonline.com/journal/archives/362-An-almost-idiots-guide-to-install-PostgreSQL-9.5,-PostGIS-2.2-and-pgRouting-2.1.0-with-Yum.html
+
+yum install postgresql95 postgresql95-server postgresql95-libs postgresql95-contrib postgresql95-devel
+
+psql  ->
+
+新建一个db
+
+
+-- Enable PostGIS (includes raster)
+CREATE EXTENSION postgis;
+-- Enable Topology
+CREATE EXTENSION postgis_topology;
+
+
+
+* 修改hostname
+
+CentOS 修改主机名
+最新文章：Virson's Blog
+
+1.临时修改主机名
+
+显示主机名：
+
+oracle@localhost:~$ hostname
+localhost
+修改主机名：
+
+oracle@localhost:~$ sudo hostname orcl1
+oracle@localhost:~$ hostname
+orcl1
+2.永久修改主机名
+
+以上的修改只是临时修改，重启后就恢复原样了。
+
+步骤1：
+
+修改/etc/sysconfig/network中的hostname
+
+vi /etc/sysconfig/network
+HOSTNAME=localhost.localdomain  #修改localhost.localdomain为orcl1
+修改network的HOSTNAME项。点前面是主机名，点后面是域名。没有点就是主机名。
+
+这个是永久修改，重启后生效。目前不知道怎么立即生效。
+
+想立即生效，可以同时采用第一种方法。
+
+ 
+
+步骤2：
+修改/etc/hosts文件
+
+vi /etc/hosts
+127.0.0.1    localhost.localdomain  #修改localhost.localdomain为orcl1
+shutdown -r now    #最后，重启服务器即可。

@@ -1,0 +1,46 @@
+#+SETUPFILE: ../css/level-1.orgcss
+#+TITLE: Linux:TCP: Possible SYN flooding 半连接攻击
+
+[[http://tech.uc.cn/?p=1790][参考]]
+
+* 诊断:TCP洪水攻击的两大特征
+
+我们看到业务曲线大跌时，检查机器和DNS，发现只是对外的web机响应慢、CPU负载高、ssh登陆慢甚至有些机器登陆不上，检查系统syslog：
+
+#+begin_src sh
+tail -f /var/log/messages
+Apr 18 11:21:56 web5 kernel: possible SYN flooding on port 80. Sending cookies.
+#+end_src
+
+
+#+begin_src sh
+检查连接数增多，并且SYN_RECV 连接特别多：
+# netstat -n | awk '/^tcp/ {++S[$NF]} END {for(a in S) print a, S[a]}'
+TIME_WAIT 16855
+CLOSE_WAIT 21
+SYN_SENT 99
+FIN_WAIT1 229
+FIN_WAIT2 113
+ESTABLISHED 8358
+SYN_RECV 48965   ->>>> 巨大的数字
+CLOSING 3
+LAST_ACK 313
+#+end_src
+
+根据经验，正常时检查连接数如下：
+
+#+begin_src sh
+# netstat -n | awk '/^tcp/ {++S[$NF]} END {for(a in S) print a, S[a]}'
+TIME_WAIT 42349
+CLOSE_WAIT 1
+SYN_SENT 4
+FIN_WAIT1 298
+FIN_WAIT2 33
+ESTABLISHED 12775
+SYN_RECV 259
+CLOSING 6
+LAST_ACK 432
+
+#+end_src
+
+以上就是TCP洪水攻击的两大特征。执行netstat -na>指定文件，保留罪证。

@@ -1,0 +1,68 @@
+redis
+
+* Redis:预分片技术
+
+本文翻译至antirez weblog的博文Redis Presharding
+
+Redis Cluster当前正在开发过程中，希望能够将数据以一种透明，快速和分区容忍的方式分布到不同的Redis实例上，但是这个集群项目还没有准备好，虽然现在已经有了清晰的设计概念，部分网络层代码，但是任然需要几个月时间的开发，并还需要几个月的时候达到稳定。
+
+但是现在人员需要分片Redis，采用了他们自己设计的的算法和系统，这篇文章描述了一种将数据分片为N块的策略，这中策略非常的简单强大，我们将其命名为"Redis Presharding"（Redis预分片技术）。
+
+** Redis非常轻量级
+
+Redis是一个非常精简的程序，现在大概包含了30k 行代码，并且只依赖于libc，并且其中使用的数据结构和代码都尽可能的精简，这带来了一个好处：Redis非常灵巧，并且单个实例所占的内存非常少。所有单个Redis实例运行起来暂用的初始内存不到1M，这意味着在单台机器上启动若干个Redis不会造成任何问题。
+
+这对于Redis预分片技术是个重要的大前提。
+
+简单的Hash算法就可以满足要求，你可以将你的数据hash到N个Redis结点上：
+
+Node = Hash(Key) Mod N
+
+这种简单hash带来的问题是一旦你想要增加或者减少节点，会一团混乱(a real mess)，Hash很简单， ReHash很复杂，其中包括在系统运行过程中移动部分Key到另一个节点上，如果你尝试设计这样一个系统，就像Redis Cluster一样，你会发现这远远比Mod N 复杂。
+
+可以预先估计会用到多少个Redis，比如128个，把他们全部建立在一台性能一般的云主机上，但是这个预估必须非常准确。
+
+** 管理多Redis实例
+
+管理128个Redis实例不像管理1个实例，你可能会编写一些脚本来启动所有的节点，关闭所有的节点，手机rdb或AOF文件，创建备份文件等，或者一些实例监控脚本。
+
+所以你必须做好管理几百个Redis实例的准备。
+
+运行多Redis实例也有其他好处，比如，如果你想重写AOF文件，按实例顺序进行，内存命中会非常小，同理入 .rdb持久化。
+
+同时你也在做一件非常灵巧的事情，你一开始就考虑到了扩展，虽然现在你的数据很小，但这意外着你已经做好了他扩大很多倍的准备。
+
+** 实例移动
+
+所以，当前某台云主机上运行了128个Redis实例，随着数据的增多它逐渐不够用了，怎么办？ 启动第3个云主机，并且移动1/3 Redis实例到上面去，这一切完全不用停机。
+
+- 在新的云主机上启动一部分Redis实例。
+- 把这些实例设置为你想要移动的实例的副本。
+- 当所有的初始化和数据已经同步完成，修改你的客户端使用新的实例。
+- 把新的实例选择为Master并且设置为 SLAVEOF NO ONE。
+- 完成后关闭旧的实例。
+- 更新的维护脚本。
+
+这套解决方法保证了当机时间为0。
+
+** Hash tags
+
+With this schema, and with Redis Cluster itself, commands taking multiple keys as arguments are harder to use since if the two keys will hash to two different instances the operation can not be performed.
+
+Either do not use multi key operations but instead try to model this complex ops at application level, or use a technique called Hash Tags. Basically if a key contains the {} characters, instead of hashing the whole string to obtain the instance ID, you just hash the string inside {}.
+
+So while the key "foo" will be hashed as SHA1("foo"), the key "bar{zap}" will be hashed just as SHA1("zap").
+
+This way you can force keys to be stored in the same instance, so that if you want to perform intersections just against user data you can do it using hash tags that are different for every user, but the same for all the keys related to the same user. Sometimes this is enough, sometimes instead this is still not enough and you have application level help to model operations like intersections between sets in different instances, or to rethink your application logic at all.
+
+** Fault tolerance
+
+The described solution can be made fault tolerant using Redis replication. Basically in our example instead of firing two virtual machines, you can instead fire four. Every instance is replicated in another instance in a different virtual machine (make sure they are in a different data center).
+If something goes bad with a virtual machine it is possible to point the clients to the other virtual machine, changing all the occurrences of the IP address in the configuration table with another one.
+
+** Conclusion
+
+A solution like Redis Cluster handling all this for you is obviously a better long term solution, but what was descried in this post is a simple way to work with what we have currently.
+
+If a set of scripts and small programs are developed to help in this kind of setups, including monitoring programs, tools to start and stop many instances, tools to perform backups and to restore all the .rdb or AOF files, it can be much simpler to setup a system like the one described here.
+

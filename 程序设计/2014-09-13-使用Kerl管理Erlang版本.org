@@ -1,0 +1,40 @@
+#+SETUPFILE: ../css/level-1.orgcss
+#+TITLE: 使用Kerl管理Erlang版本
+
+安装kerl
+
+Kerl，一个好用的Erlang版本管理工具，可以让你的系统并存多个Erlang版本，并随时方便切换。
+
+我从这里学习到了这个工具:  [[http://littleq.logdown.com/posts/2013/10/11/kerl-to-manage-erlang-versions-on-your-system][利用 kerl 來管理你系統上的 Erlang 版本]]
+
+安装方法 GitHub上的仓库
+
+#+begin_src bash
+curl -O https://raw.githubusercontent.com/spawngrid/kerl/master/kerl ; chmod a+x kerl
+#+end_src
+
+
+Mac OS X 的使用者請注意，因爲預設的 configure 參數是針對 Linux 系統的，如果要在 Mac OS X 上面順利 build Erlang，你需要新增一個檔案 .kerlrc 在 $HOME (~) 底下，內容放上：
+
+#+begin_src bash
+KERL_CONFIGURE_OPTIONS="--disable-hipe --enable-smp-support --enable-threads \
+                        --without-odbc --without-pcre \
+                        --enable-kernel-poll  --enable-darwin-64bit"
+#+end_src
+
+mkdir ~/erlang
+
+- kerl list releases
+- kerl build R16B03-1 r16b03-1
+- kerl build R15B02 r15b02
+- kerl install r15b02 ~/erlang/r15b02
+- kerl install r16b03-1 ~/erlang/r16b03-1
+
+[Kerl On Github](https://github.com/yrashk/kerl)
+
+
+. /Users/zhuoyikang/erlang/r15b02/activate  => 注意是点号后面跟上。
+. /Users/zhuoyikang/erlang/17.5/activate
+
+
+kerl_deactivate

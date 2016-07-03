@@ -1,0 +1,7 @@
+#+SETUPFILE: ../css/level-1.orgcss
+#+TITLE: Rush:学习笔记
+
+[[http://doc.rust-lang.org/book/README.html][ReadMe]]
+[[http://www.usingcsp.com/cspbook.pdf][Communicating Sequential Processes]]
+
+x

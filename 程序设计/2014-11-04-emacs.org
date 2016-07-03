@@ -1,0 +1,154 @@
+#+SETUPFILE: ../css/level-1.orgcss
+#+TITLE: Emacs:学习笔记
+
+* 按键操作
+** OrgMode
+C-c C-x a
+
+C-c a < t
+N r
+m (mark for bulk action)
+B a (or B $ for arch->sibling)
+
+导出org-mode时下划线
+*+OPTIONS: ^:nil
+** 窗口操作
+C-x ^ 纵向扩大窗口
+C-x } 横向扩大窗口
+
+** magit:如何查看当前文件的不同
+You possibly just want vc-diff bound to C-x v = to diff the selected buffer's file?
+
+* Tramp
+** 如何编辑远程主机文件
+emacs是一个强大的编辑器，而且支持编辑远程主机的文件，当然了，后台可能是ftp,ssh等协议，在此只是做个备份以防忘记
+emacs编辑远程主机文件，和打开编辑一般文件没有什么特别，除了打开文件的方式有点特殊外，格式如下
+
+
+#+begin_src bash
+  /host:filename
+  /user@host:filename
+  /user@host#port:filename
+  /method:user@host:filename
+  /method:user@host#port:filename
+#+end_src
+
+method可以是：ftp,ssh,rlogin,telnet等可以远程登录的程序，其缺省的是
+
+如果主机名称以"ftp."开始，那就用ftp
+如果用户名称是ftp或者anonymous，那也用ftp
+其余的缺省是ssh
+
+** Waiting for prompts from remote shell
+前几天终于买了Linode的VPS，配置过程中遇见一个灵异问题：
+Emacs无法远程SSH编辑文件，状态一直卡在Tramp: Waiting for prompts from remote shell。
+
+折腾了好久，终于定位到zsh的配置oh-my-zsh上。
+最后查到原来Emacs Wiki上已经有解决方案，在.zshrc底部加上：
+
+#+begin_src bash
+   if [[ "$TERM" == "dumb" ]]
+   then
+   unsetopt zle
+   unsetopt prompt_cr
+   unsetopt prompt_subst
+   unfunction precmd
+   unfunction preexec
+   PS1='$ '
+   fi
+#+end_src
+
+
+特别注意的是要在加到目标机器上，不是自己终端上。
+* FlyCheck
+
+1. [FlyCheck GitHub](https://github.com/flycheck/flycheck)
+2. [FlyCheck Home](http://www.flycheck.org/en/latest/index.html)
+
+
+#+begin_src emacs-lisp
+
+(flycheck-define-checker erlang
+  "An Erlang syntax checker using the Erlang interpreter.
+
+See URL `http://www.erlang.org/'."
+  :command ("erlc" "-o" temporary-directory "-Wall"
+            "-I" "../include" "-I" "../../include" "-I" "../../../include"
+            "-pa" "../ebin"  "-pa" "../../ebin" "-pa" "../../../ebin"
+            source)
+  :error-patterns
+  ((warning line-start (file-name) ":" line ": Warning:" (message) line-end)
+   (error line-start (file-name) ":" line ": " (message) line-end))
+  :modes erlang-mode)
+
+#+end_src
+
+* 环境变量
+
+[[http://blog.galeo.me/post/23467503436/path-environment-variable-on-mac-os-x-emacs-app][PATH Environment Variable On Mac OS X & Emacs.App]]
+
+* Dired
+** 自定义输出
+You can reduce the amount of information displayed by using Emacs' ls emulation instead of allowing it to use ls directly.
+To enable ls emulation, add the following code to your startup file (probably .emacs or .emacs.d/init.el):
+
+(require 'ls-lisp)
+(setq ls-lisp-use-insert-directory-program nil)
+You can then customise the display with M-x customize-group RET ls-lisp RET. Specifically, the "Ls Lisp Verbosity" setting can be used to disable a number of columns. There's no obvious way to get it down to just the filename and size, but you can certainly get rid of the owner/group/link-count columns.
+* 正则表达式
+
+http://dsec.pku.edu.cn/~rli/WiKi/EmacsRegexp.html
+* 字体大小切换
+
+放大字体: Ctrl-x Ctrl-+ 或 Ctrl-x Ctrl-=
+缩小字体: Ctrl-x Ctrl–
+重置字体: Ctrl-x Ctrl-0
+* mysql
+** 通过下面的命令设置两个连接mysql的常用帐号
+
+  #+begin_src emacs-lisp
+    (setq sql-connection-alist
+          '((pool-a
+             (sql-product 'mysql)
+             (sql-server "ip1")
+             (sql-user "user1")
+             (sql-password "pwd1")
+             (sql-database "db1")
+             (sql-port 6871))
+            (pool-b
+             (sql-product 'mysql)
+             (sql-server "ip2")
+             (sql-user "user2")
+             (sql-password "pwd2")
+             (sql-database "db2")
+             (sql-port 3306))))
+
+    (defun sql-connect-preset (name)
+      "Connect to a predefined SQL connection listed in `sql-connection-alist'"
+      (eval `(let ,(cdr (assoc name sql-connection-alist))
+               (flet ((sql-get-login (&rest what)))
+                 (sql-product-interactive sql-product)))))
+
+    (defun mysql-a ()
+      (interactive)
+      (sql-connect-preset 'pool-a))
+
+    (defun mysql-b ()
+      (interactive)
+      (sql-connect-preset 'pool-b))
+
+  #+end_src
+
+
+  如果你的mysql端口不是标准端口的话，需要用下面的命令在.emacs文件中设置
+
+  #+begin_src emacs-lisp
+(setq sql-mysql-options (list "-P 6871"))
+  #+end_src
+
+** 连接mysql到当前的sql-buffer。
+
+1. 打开sql文件并进入sql-mode，直接打开sql文件或者打开一个文件后再执行M-x sql-mode
+2. 执行M-x sql-set-product，然后输入mysql
+3. 执行命令M-x sql-set-sqli-buffer然后输入想要连接的那个connection buffer，默认为*SQL* buffer
+4. 输入SQL语句，按C-c C-c执行当前段落中的所有语句，  或者选择要执行的语句按下C-c C-b

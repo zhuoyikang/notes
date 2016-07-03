@@ -1,0 +1,57 @@
+#+SETUPFILE: ../css/level-1.orgcss
+#+TITLE: virtual box:设置主机和虚拟机双向访问
+
+VirtualBox默认的网络方式NAT不支持主机->虚拟机的访问，需要单独增加一块host-only的网卡才可以。
+
+* VirtualBox增加虚拟网络
+
+  VirtualBox > Preferences > Network, set up a host-only network.
+
+* 虚拟机增加网卡
+
+  打开终端，
+  $sudo vi /etc/network/interfaces
+  gentoo -> /etc/conf.d/net
+
+  #+begin_src bash
+auto eth1
+iface eth1 inet static
+address 192.168.32.3 *根据之前你创建的Adapter的地址填写，我之前创建的
+netmask 255.255.255.0
+  #+end_src
+
+  在配置文件中加入以上内容，
+  重新启动虚拟机
+
+** gentoo 新增网卡
+
+   查看网卡名字 =>
+   /sys/class/net
+
+   重新ln -s 一个 =>
+   cd /etc/init.d
+   ln -s net.lo  net.enp0s8
+
+   修改/etc/conf.d/net =>
+   config_enp0s8="192.168.56.2/24"
+
+   启动网卡 =>
+   /etc/init.d/net.enp0s8 start
+
+   添加默认启动
+   rc-update add net.enp0s8 default
+
+* VirtualBox网络访问方式
+
+VirtualBox中有4中网络连接方式：
+
+| NAT               | 网络地址转换模式(Network Address Translation) |
+| Bridged Adapter   | 桥接模式                                      |
+| Internal          | 内部网络模式                                  |
+| Host-only Adapter | 主机模式                                      |
+
+VMWare中有三种，其实他跟VMWare 的网络连接方式都是一样概念，只是比VMWare多了Internal方式。
+
+要让自己（或别人）理解深刻，方法就是做比较和打比方，比较之间的不同和相同，拿熟知的事物打比方。先来一张图，通过这张图就很容易看出这4种方式的区别：
+
+![pic](http://images.cnitblog.com/blog/244227/201310/11140249-be158136c64f4b828d1d825104bf2e3e.png)

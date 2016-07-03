@@ -1,0 +1,937 @@
+#+SETUPFILE: ../css/level-1.orgcss
+#+TITLE: PostGreSQL专题
+
+* 杂项
+http://www.cnblogs.com/shineqiujuan/p/4703304.html 两本书
+
+[[https://www.amazon.cn/PostgreSQL%E4%BF%AE%E7%82%BC%E4%B9%8B%E9%81%93-%E4%BB%8E%E5%B0%8F%E5%B7%A5%E5%88%B0%E4%B8%93%E5%AE%B6-%E5%94%90%E6%88%90/dp/B00WUBYVIO/ref=sr_1_1?ie=UTF8&qid=1461225738&sr=8-1&keywords=postgres][PostgreSQL修炼之道:从小工到专家 ]]
+[[https://www.amazon.cn/PostgreSQL%E5%8D%B3%E5%AD%A6%E5%8D%B3%E7%94%A8-%E5%A5%A5%E8%B4%9D/dp/B01A5T5UQO/ref=sr_1_2?ie=UTF8&qid=1461225738&sr=8-2&keywords=postgres][PostgreSQL即学即用]]
+
+
+[[http://www.postgresql.org/download/macosx/][安装]]  
+
+安装很好的参考文档 http://sw897.github.io/2014/04/24/install-postgresql-postgis-on-os-x/
+
+[[http://postgresapp.com/][安装最屌]] -> PostgreSQL 9.5.2  PostGIS 2.2.2
+
+GiST框架。
+C语言写的触发器
+
+
+#+begin_src sql
+create table score (
+no int primary key,
+student_name varchar(40) ,
+chinese_score int,
+math_score int,
+test_date date
+);
+
+insert into score values(1, 'good', 2, 3, '2016-3-3');
+#+end_src
+
+
+#+begin_src sql
+CREATE DATABASE my_spatial_db TEMPLATE=template_postgis；
+#+end_src
+
+
+好用的ppt:
+http://wenku.baidu.com/link?url=Kb7qjG37J4_1ghJUjYBTzJPe74q9P1ewFy7Vx2LBjYLTdUg_wLLts8xJbqWS9fMmifBcmyjKGCF4iHZUIULz9CzY_iaqIMYsiRbjvQZ5llC###
+http://blog.csdn.net/huangrunqing/article/details/8926912
+
+* 一些现成的数据源
+
+https://switch2osm.org/loading-osm-data/
+http://www.statsilk.com/maps/download-free-shapefile-maps
+http://www.diva-gis.org/Data
+
+
+
+http://www.gadm.org/download  -> 国家行政区域图.
+
+* PosGreSql 命令行基本操作
+
+http://www.cnblogs.com/wangkangluo1/archive/2012/05/29/2523654.html
+
+psql -h 127.0.0.1 -U zhuoyikang -d gis_tr
+
+\c dbname 切换数据库,相当于mysql的use dbname
+
+\l 列举数据库，相当于mysql的show databases
+
+\dt 列举表，相当于show tables
+
+\d tblname 查看表结构，相当于desc tblname,show columns from tbname
+
+一般性
+\c[onnect] [资料库名称|- 用户名称|- 主机|- 埠号|-]
+                 连线到新的资料库 (目前是 "test")
+\cd [目录]     改变目前的工作目录
+\copyright     显示 PostgreSQL 的使用和发行条款
+\encoding [字元编码名称]
+                 显示或设定用户端字元编码
+\h [名称]      SQL 命令语法上的说明，用 * 显示全部命令
+\prompt [文本] 名称
+                 提示用户设定内部变数
+\password [USERNAME]
+                 securely change the password for a user
+\q             退出 psql
+\set [名称 [值数]]
+                 设定内部变数，若无参数则列出全部变数
+\timing        切换命令计时开关 (目前是 关闭)
+\unset 名称    清空(删除)内部变数
+\! [命令]      在 shell 里执行命令或开启一个 shell
+
+查询缓存区
+\e [档案]      使用外部编辑器编辑查询缓存区(或档案)
+\g [档案]      将查询缓存区送至伺服器 (并把结果写入档案或 | 管线"pipe")
+\p             显示查询缓存区的内容
+\r             重置(清除)查询缓存区
+\w 档案        将查询缓存区写入档案
+
+输入/输出
+\echo [字串]   将字串写至标准输出
+\i 档案        从档案中执行命令
+\o [档案]      将全部查询结果写入档案或 |管道"pipe"
+\qecho [字串]
+                 将字串写入查询输出串流 (参考 \o)
+资讯性
+\d [名称]      为资料表、索引、序列数或视观表加上注解
+\d{t|i|s|v|S} [模型] (加上 "+" 取得更多资讯)
+                 列出资料表/索引/序列数/视观表/系统资料表
+\da [模型]     列出聚集函数
+\db [模型]     列出表空间 (加上 "+" 取得更多资讯)
+\dc [模型]     列出字元编码转换
+\dC            列出型别转换
+\dd [模型]     显示物件的注解
+\dD [模型]     列出共同值域
+\df [模型]     列出函数(加上 "+" 取得更多资讯)
+\dF [模型]     列出文本搜寻组态 (加上 "+" 取得更多资讯)
+\dFb [模型]     列出文本搜寻字典 (加上 "+" 取得更多资讯)
+\dFt [模型]     列出文本搜寻样式
+\dFp [模型]     列出文本搜寻剖析器 (加上 "+" 取得更多资讯)
+\dg [模型]     列出群组
+\dn [模型]     列出架构模式 (加上 "+" 取得更多资讯)
+\do [名称]     列出运算子
+\dl            列出大型物件，同 \lo_list
+\dp [模型]     列出资料表、视观表和序列数的存取权限
+\dT [模型]     列出资料型别(加上 "+" 取得更多资讯)
+\du [模型]     列出角色
+\l             列出全部资料库(加上 "+" 取得更多资讯)
+\z [模型]     列出资料表、视观表和序列数存取权限(同 \dp)
+
+格式化
+\a             切换非对齐模式和对齐模式
+\C [字串]      设定资料表标题或取消
+\f [字串]      显示或设定非对齐模式的栏位分隔符号
+\H             切换 HTML 输出模式 (目前是 关闭)
+\pset 名称 [值数]
+                 设定资料表输出选项
+                 (名称：= {format|border|expanded|fieldsep|footer|null|
+                 recordsep|tuples_only|title|tableattr|pager})
+\t             只显示资料列 (目前是 关闭)
+\T [字串]      设定 HTML 表格标签属性
+\x             切换扩展输出模式(目前是 关闭)
+复制(Copy)，大型物件(Large Object)
+\copy ...      执行 SQL COPY，资料流指向客户端主机
+\lo_export LOBOID 档案
+\lo_import 档案 [COMMENT]
+\lo_list
+\lo_unlink LOBOID    大型物件运算子
+
+* GIS 概念
+
+** 各种名词
+
+参考此文:http://www.cnblogs.com/xiashengwang/p/3897536.html
+
+EPSG：European Petroleum Survey Group (EPSG)， http://www.epsg.org/，它成立于1986年，并在2005年重组为OGP(Internation Association of Oil & Gas Producers)，它负责维护并发布坐标参照系统的数据集参数，以及坐标转换描述，该数据集被广泛接受并使用，通过一个Web发布平台进行分发，同时提供了微软Acess数据库的存储文件，通过SQL 脚本文件，mySQL, Oracle 和PostgreSQL等数据库也可使用。
+目前已有的椭球体，投影坐标系等不同组合都对应着不同的ID号，这个号在EPSG中被称为EPSG code，它代表特定的椭球体、单位、地理坐标系或投影坐标系等信息。
+
+SRID：，OGC标准中的参数SRID，也是指的空间参考系统的ID，与EPSG一致；
+
+SRS = EPSG:4326代表地理坐标系WGS1984
+WKT：空间参考系统的文字描述
+
+百度用的墨卡托坐标系
+
+** 数据结构  
+
+该ppt不错，可以看看，介绍了各种基本概念: http://wenku.baidu.com/link?url=mMLNlnjiUpYvDfYu5z5FU3j99-ve6J6LujyPeZCehjWbHGCGvk40XILj4IAvvFbq-l3ixoVMQKm-npdstwUZADju38loXVQazsOmLHM2-UG
+
++ 矢量数据 vector
++ 栅栏数据 raster
+
+地球模型
+
+经度:
+纬度:通过地球面A点做球面的法线，法线与赤道面的夹角叫纬度.
+投影：将椭圆地球上的点映射到2维平面上的方法。
+
+大地坐标系：经纬度
+投影坐标系：基于平面的X，Y坐标系.
+
+
+WGS84 坐标系
+西安80坐标系/ 北京54坐标系
+
+EPSG -> 
+
+* PostGis [[http://postgis.net/docs/manual-2.0/][官方manual]] 学习
+** 数据类型和表示 
+
+Examples of the text representations (WKT) of the spatial objects of the features are as follows:
+
+#+begin_src sql
+POINT(0 0)
+
+LINESTRING(0 0,1 1,1 2)
+
+POLYGON((0 0,4 0,4 4,0 4,0 0),(1 1, 2 1, 2 2, 1 2,1 1))
+
+MULTIPOINT(0 0,1 2)
+
+MULTILINESTRING((0 0,1 1,1 2),(2 3,3 2,5 4))
+
+MULTIPOLYGON(((0 0,4 0,4 4,0 4,0 0),(1 1,2 1,2 2,1 2,1 1)), ((-1 -1,-1 -2,-2 -2,-2 -1,-1 -1)))
+
+GEOMETRYCOLLECTION(POINT(2 3),LINESTRING(2 3,3 4))
+#+end_src
+
+** 基础操作
+
+*** 创建空间数据库
+
+CREATE DATABASE my_spatial_db TEMPLATE=template_postgis;
+
+template_postgis 如果不存在则需要自己创建.
+
+#+begin_src sql
+createdb template_postgis
+psql -f /Applications/Postgres.app/Contents/Versions/9.5/share/postgresql/contrib/postgis-2.2/postgis.sql -d template_postgis
+psql -f /Applications/Postgres.app/Contents/Versions/9.5/share/postgresql/contrib/postgis-2.2/spatial_ref_sys.sql -d template_postgis
+createdbz -U zhuoyikang -T template_postgis mydb
+#+end_src
+
+*** 创建表 
+
+#+begin_src sql
+
+CREATE TABLE roads ( road_id int4 , road_name varchar(25),  roads_geom  geometry(LINESTRING,4326) );
+
+ALTER TABLE roads ADD COLUMN geom2 geometry(LINESTRINGZ,4326);
+
+
+CREATE TABLE parks (
+  park_id    INTEGER,
+  park_name  VARCHAR,
+  park_date  DATE,
+  park_type  VARCHAR
+);
+
+SELECT AddGeometryColumn('parks', 'park_geom', 128, 'MULTIPOLYGON', 2 );
+
+#+end_src
+
+*** 创建几何体
+
+#+begin_src sql
+SELECT AddGeometryColumn('', 'gtest','geom', -1, 'LINESTRING', 2);
+
+
+#+end_src
+
+*** 插入数据
+
+#+begin_src sql
+INSERT INTO gtest (ID, NAME, GEOM) VALUES (1,'First Geometry',ST_GeomFromText('LINESTRING(2 3,4 5,6 5,7 8)', -1));
+#+end_src
+
+*** 导入数据
+
+
+#+begin_src sql
+
+drop TABLE roads;
+
+CREATE TABLE roads (
+  road_id INTEGER,
+  road_name VARCHAR
+);
+SELECT AddGeometryColumn( 'roads', 'roads_geom', 0, 'GEOMETRY', 3 
+
+
+CREATE TABLE roads (road_id int4, road_name varchar(20) );  
+SELECT AddGeometryColumn('', 'roads','roads_geom',-1,'LINESTRING',2);
+
+BEGIN;
+INSERT INTO roads (road_id, roads_geom, road_name) VALUES (1,ST_GeomFromText('LINESTRING(191232 243118,191108 243242)',-1),'Jeff Rd');
+INSERT INTO roads (road_id, roads_geom, road_name) VALUES (2,ST_GeomFromText('LINESTRING(189141 244158,189265 244817)',-1),'Geordie Rd');
+INSERT INTO roads (road_id, roads_geom, road_name)  VALUES (3,ST_GeomFromText('LINESTRING(192783 228138,192612 229814)',-1),'Paul St');
+INSERT INTO roads (road_id, roads_geom, road_name)   VALUES (4,ST_GeomFromText('LINESTRING(189412 252431,189631 259122)',-1),'Graeme Ave');
+INSERT INTO roads (road_id, roads_geom, road_name)   VALUES (5,ST_GeomFromText('LINESTRING(190131 224148,190871 228134)',-1),'Phil Tce');
+INSERT INTO roads (road_id, roads_geom, road_name)   VALUES (6,ST_GeomFromText('LINESTRING(198231 263418,198213 268322)',-1),'Dave Cres');
+COMMIT;
+#+end_src
+
+*** 检查函数 
+
+
+#+begin_src sql
+SELECT  st_isvalid('LINESTRING(0 0, 1 1)'),  st_isvalid('LINESTRING(0 0, 0 0)'); 
+#+end_src
+
+*** 查询
+
+However, there will be times when some kind of restriction is necessary to cut down the number of fields returned. In the case of attribute-based restrictions, just use the same SQL syntax as normal with a non-spatial table. In the case of spatial restrictions, the following operators are available/useful:
+
+**** &&
+
+This operator tells whether the bounding box of one geometry intersects the bounding box of another.
+
+**** ST_OrderingEquals
+
+This tests whether two geometries are geometrically identical. For example, if 'POLYGON((0 0,1 1,1 0,0 0))' is the same as 'POLYGON((0 0,1 1,1 0,0 0))' (it is).
+
+**** =
+
+This operator is a little more naive, it only tests whether the bounding boxes of two geometries are the same.
+
+Next, you can use these operators in queries. Note that when specifying geometries and boxes on the SQL command line, you must explicitly turn the string representations into geometries by using the "ST_GeomFromText()" function. The 312 is a fictitious spatial reference system that matches our data. So, for example:
+
+#+begin_src sql
+
+//ok
+SELECT road_id, ST_AsText(roads_geom) AS geom, road_name FROM roads;
+
+//ok
+SELECT road_id, road_name FROM roads WHERE roads_geom  ~=  ST_GeomFromText('LINESTRING(191232 243118,191108 243242)',-1); 
+
+//ok
+SELECT road_id, road_name FROM roads  WHERE ST_OrderingEquals(roads_geom , ST_GeomFromText('LINESTRING(191232 243118,191108 243242)',312)) ;
+
+
+explain SELECT road_id, road_name, ST_AsText(roads_geom) AS geom FROM roads WHERE roads_geom && ST_GeomFromText('POLYGON((191232 243117,191232 244117,193232 244117 , 191232 243117))',312);
+
+select id, ST_AsText(shape_u3d) from blocks where shape_u3d && ST_MakeEnvelope(0,0, 1,1);
+
+//ok
+SELECT *, ST_AsText(roads_geom) AS geom FROM roads WHERE   roads_geom && ST_MakeEnvelope(191232, 243117, 191232, 243119, 312);
+
+//ok
+SELECT ST_AsText(ST_MakeEnvelope(10, 10, 11, 11, 4326));
+SELECT ST_AsText(ST_MakeEnvelope(10, 10, 11, 11));
+
+SELECT *, ST_AsText(point_list) AS geom  from lines;
+
+#+end_src
+
+** 空间索引
+
+Indexes are what make using a spatial database for large data sets possible. Without indexing, any search for a feature would require a "sequential scan" of every record in the database. Indexing speeds up searching by organizing the data into a search tree which can be quickly traversed to find a particular record. PostgreSQL supports three kinds of indexes by default: B-Tree indexes, R-Tree indexes, and GiST indexes.
+
+B-Trees are used for data which can be sorted along one axis; for example, numbers, letters, dates. GIS data cannot be rationally sorted along one axis (which is greater, (0,0) or (0,1) or (1,0)?) so B-Tree indexing is of no use for us.
+
+R-Trees break up data into rectangles, and sub-rectangles, and sub-sub rectangles, etc. R-Trees are used by some spatial databases to index GIS data, but the PostgreSQL R-Tree implementation is not as robust as the GiST implementation.
+
+GiST (Generalized Search Trees) indexes break up data into "things to one side", "things which overlap", "things which are inside" and can be used on a wide range of data-types, including GIS data. PostGIS uses an R-Tree index implemented on top of GiST to index GIS data.
+
+空间索引建立需要的时间
+
+Building a spatial index is a computationally intensive exercise: on tables of around 1 million rows, on a 300MHz Solaris machine, we have found building a GiST index takes about 1 hour. After building an index, it is important to force PostgreSQL to collect table statistics, which are used to optimize query plans:
+
+GiST 和 Mysql 的Rtree的区别
+
+GiST indexes have two advantages over R-Tree indexes in PostgreSQL. Firstly, GiST indexes are "null safe", meaning they can index columns which include null values. Secondly, GiST indexes support the concept of "lossiness" which is important when dealing with GIS objects larger than the PostgreSQL 8K page size. Lossiness allows PostgreSQL to store only the "important" part of an object in an index -- in the case of GIS objects, just the bounding box. GIS objects larger than 8K will cause R-Tree indexes to fail in the process of being built.
+
+
+建立索引的语法
+
+#+begin_src sql
+//2d索引
+CREATE INDEX [indexname] ON [tablename] USING GIST ( [geometryfield] ); 
+
+//多D索引
+CREATE INDEX [indexname] ON [tablename] USING GIST ([geometryfield] gist_geometry_ops_nd);
+
+// 对道路信息创建索引.
+CREATE INDEX index_test ON roads USING GIST ( roads_geom ); 
+
+explain SELECT *, ST_AsText(roads_geom) AS geom FROM roads WHERE   roads_geom && ST_MakeEnvelope(191232, 243117, 191232, 243119, 312);
+
+#+end_src
+
+
+弱点: 查询选择器优化的不太好，可能会出现没有使用索引查询的情况.
+
+如果发现没有使用索引的处理方法:
+
+Firstly, make sure statistics are gathered about the number and distributions of values in a table, to provide the query planner with better information to make decisions around index usage. For PostgreSQL 7.4 installations and below this is done by running update_geometry_stats([table_name, column_name]) (compute distribution) and VACUUM ANALYZE [table_name] [column_name] (compute number of values). Starting with PostgreSQL 8.0 running VACUUM ANALYZE will do both operations. You should regularly vacuum your databases anyways -- many PostgreSQL DBAs have VACUUM run as an off-peak cron job on a regular basis.
+
+If vacuuming does not work, you can force the planner to use the index information by using the SET ENABLE_SEQSCAN=OFF command. You should only use this command sparingly, and only on spatially indexed queries: generally speaking, the planner knows better than you do about when to use normal B-Tree indexes. Once you have run your query, you should consider setting ENABLE_SEQSCAN back on, so that other queries will utilize the planner as normal.
+
+[Note]	
+As of version 0.6, it should not be necessary to force the planner to use the index with ENABLE_SEQSCAN.w
+
+If you find the planner wrong about the cost of sequential vs index scans try reducing the value of random_page_cost in postgresql.conf or using SET random_page_cost=#. Default value for the parameter is 4, try setting it to 1 or 2. Decrementing the value makes the planner more inclined of using Index scans.
+
+** 数据导入
+
+#+begin_src sql
+shp2pgsql shaperoads.shp myschema.roadstable | psql -d roadsdb
+
+shp2pgsql -c -D -s 4269 -i -I shaperoads.shp myschema.roadstable > roads.sql
+
+psql -d roadsdb -f roads.sql
+
+
+shp2pgsql CHN_adm0.shp > CHN_adm0.sql
+
+for v in `ls |grep shp`
+do
+      shp2pgsql $v > $v.sql
+done
+
+for v in `ls |grep shp.sql`
+do
+     psql -d gis_tr -f $v
+done
+
+\x
+select * from sometable;
+
+
+#+end_src
+
+
+
+将一个多边形分割为单多边形字段.
+Converting MULTIPOLYGONs to POLYGONs
+
+#+begin_src sql
+
+SELECT sometable.field1, sometable.field1,
+      (ST_Dump(sometable.the_geom)).geom AS the_geom
+FROM sometable;
+
+select count(*) from (SELECT (ST_NumGeometries(geom)).geom As geom FROM chn_tmp) As b;
+
+DROP table beijing_polygon;
+CREATE TABLE beijing_polygon (geom geometry(POLYGON, 0) );
+
+SELECT chn_tmp.*, (ST_Dump(geom)).geom As geom FROM chn_tmp;
+			  
+INSERT INTO beijing_polygon (SELECT (ST_Dump(geom)).geom as geom from chn_tmp);
+
+CREATE TABLE chn_polygon (LIKE chn_tmp INCLUDING ALL );
+
+ALTER TABLE chn_polygon  RENAME TO polygons;
+#+end_src
+
+
+复制表
+
+#+begin_src sql
+制表结构
+create table his_process_data_201405 as
+( select * from his_process_data_201406 limit 0)
+完整复制一张表
+create table chn_tmp as ( select * from chn_adm1);
+
+
+drop table matrix;
+CREATE TABLE matrix (id int4 primary key , x int4, y int4 );  
+SELECT AddGeometryColumn('', 'matrix', 'geom', -1, 'POLYGON', 2);
+\d matrix;
+select count(*) from matrix;
+ 
+
+CREATE INDEX index_on_matrix ON matrix USING GIST ( geom ); 
+select ST_AsText(geom) from matrix;
+select ST_AsText(ST_MakeEnvelope(8, 8, 16, 16, 0));
+
+SELECT x, y, ST_AsText(geom)  FROM matrix WHERE  geom && ST_MakeEnvelope(5008, 5008, 5046, 5016, 0);
+#+end_src
+
+
+生成matrix ruby代码
+
+#+begin_src ruby
+# coding: utf-8
+# 生成一个NxN的Polygon.
+
+$x_max = 10000
+$y_max = 10000
+
+$x_unit = 10
+$y_unit = 10
+
+def polygon(id, xmin, ymin, xmax, ymax)
+  xdis = xmax - xmin;
+  ydis = ymax - ymin;
+  polygon= "POLYGON((#{xmin} #{ymin}, #{xmin} #{ymax}, #{xmax} #{ymax}, #{xmax} #{ymin}, #{xmin} #{ymin}))"
+  "INSERT INTO matrix (id, x, y, geom) VALUES (#{id} ,#{ xmin/$x_unit },  #{ ymin/$y_unit },ST_GeomFromText('#{polygon}',0));\n"
+end
+
+id=1
+0.step($y_max - $y_unit , $y_unit) { |y|
+  0.step($x_max - $x_unit , $x_unit) { |x|
+    printf(polygon(id,x,y, x+$x_unit, y+$y_unit))
+    id=id+1
+  }
+}
+#+end_src
+
+
+生成sqldemo
+#+begin_src sql
+INSERT INTO matrix (id, x, y, geom) VALUES (1 ,0,  0,ST_GeomFromText('POLYGON((0 0, 0 10, 10 10, 10 0, 0 0))',0));
+INSERT INTO matrix (id, x, y, geom) VALUES (2 ,1,  0,ST_GeomFromText('POLYGON((10 0, 10 10, 20 10, 20 0, 10 0))',0));
+INSERT INTO matrix (id, x, y, geom) VALUES (3 ,2,  0,ST_GeomFromText('POLYGON((20 0, 20 10, 30 10, 30 0, 20 0))',0));
+INSERT INTO matrix (id, x, y, geom) VALUES (4 ,3,  0,ST_GeomFromText('POLYGON((30 0, 30 10, 40 10, 40 0, 30 0))',0));
+INSERT INTO matrix (id, x, y, geom) VALUES (5 ,4,  0,ST_GeomFromText('POLYGON((40 0, 40 10, 50 10, 50 0, 40 0))',0));
+INSERT INTO matrix (id, x, y, geom) VALUES (6 ,5,  0,ST_GeomFromText('POLYGON((50 0, 50 10, 60 10, 60 0, 50 0))',0));
+INSERT INTO matrix (id, x, y, geom) VALUES (7 ,6,  0,ST_GeomFromText('POLYGON((60 0, 60 10, 70 10, 70 0, 60 0))',0));
+INSERT INTO matrix (id, x, y, geom) VALUES (8 ,7,  0,ST_GeomFromText('POLYGON((70 0, 70 10, 80 10, 80 0, 70 0))',0));
+INSERT INTO matrix (id, x, y, geom) VALUES (9 ,8,  0,ST_GeomFromText('POLYGON((80 0, 80 10, 90 10, 90 0, 80 0))',0));
+INSERT INTO matrix (id, x, y, geom) VALUES (10 ,9,  0,ST_GeomFromText('POLYGON((90 0, 90 10, 100 10, 100 0, 90 0))',0));
+
+
+
+INSERT INTO polygon_1 (id, geom) VALUES (1, ST_GeomFromText('',0));
+
+#+end_src
+
+多边形数据库操作.
+
+#+begin_src R
+
+drop table polygon_1;
+CREATE TABLE polygon_1 (id int4 primary key  );  
+SELECT AddGeometryColumn('', 'polygon_1', 'geom', -1, 'POLYGON', 3);
+\d polygon_1;
+select count(*) from polygon_1;
+
+
+INSERT INTO polygon_1 (id, geom) VALUES (1, ST_GeomFromText('POLYGON((1 5, 2 3, 1 1, 1 5))',0));
+
+select id ,ST_AsText(geom) from polygon_1;
+INSERT INTO polygon_1 (id, geom) VALUES (2, ST_GeomFromText('POLYGON((1 5 1, 2 3 2, 1 1 5, 1 5 1))',0));
+
+cat t1 | awk '{print "INSERT INTO polygon_1 (id, geom) VALUES (" NR ", ST_GeomFromText("  $0 ",0));"}'
+
+
+# 第2个表
+drop table polygon_2;
+CREATE TABLE polygon_2 (id int4 primary key  );  
+SELECT AddGeometryColumn('', 'polygon_2', 'geom', -1, 'POLYGON', 2);
+
+delete from polygon_2;
+
+DELETE FROM polygon_2;
+INSERT INTO polygon_2 (id, geom) VALUES (1, ST_GeomFromText('POLYGON((1 5, 2 3, 1 1, 1 5))',0));
+INSERT INTO polygon_2 (id, geom) VALUES (2, ST_GeomFromText('POLYGON((1 5, 3 8, 4.8 7,2 3, 1 5))',0));
+INSERT INTO polygon_2 (id, geom) VALUES (3, ST_GeomFromText('POLYGON((2 3, 4.8 7, 5.3 5, 4.5 3.5, 2 3))',0));
+INSERT INTO polygon_2 (id, geom) VALUES (4, ST_GeomFromText('POLYGON((5.3 5, 5 1, 4.5 3.5, 5.3 5))',0));
+INSERT INTO polygon_2 (id, geom) VALUES (5, ST_GeomFromText('POLYGON((1 1, 2 3, 4.5 3.5, 5 1, 1 1))',0));
+
+
+SELECT id, ST_AsText(geom) FROM polygon_2 WHERE geom && ST_GeomFromText('POLYGON((1.5 2.5, 1.5 3.5, 2.5 3.5, 2.5 2.5, 1.5 2.5))',0);
+
+
+SELECT id, ST_AsText(geom) FROM polygon_2 WHERE geom && ST_MakeEnvelope(1.5, 2.5, 1.6, 2.6, 0) and ST_Within(ST_MakeEnvelope(1.5, 2.5, 1.6, 2.6, 0), geom);
+
+
+# 点搜索很奇怪，似乎X或者Y坐标有交集的都会搜索到。
+
+SELECT id, ST_AsText(geom) FROM polygon_2 WHERE geom && ST_GeomFromText('POINT(1.5 3)') and ST_Within(ST_GeomFromText('POINT(1.5 3)'), geom);
+
+SELECT id, ST_AsText(geom) FROM polygon_2 WHERE geom && ST_GeomFromText('POINT(1 5)')  And ST_Intersects(ST_GeomFromText('POINT(1 5)'), geom); ;
+
+SELECT id, ST_AsText(geom) FROM polygon_2 WHERE geom && ST_GeomFromText('POINT(1.5 3)') And ST_Intersects(ST_GeomFromText('POINT(1.5 3)'), geom);
+
+//select ST_AsText(ST_MakeEnvelope(1.5, 2.5, 1.6, 2.6, 0));
+
+//POLYGON((1.5 2.5,1.5 2.6,   1.6 2.6,   1.6 2.5,1.5 2.5))
+
+#+end_src
+
+** 线相关操作
+
+#+begin_src sql
+
+drop table lines;
+CREATE TABLE lines (id int4 primary key);  
+SELECT AddGeometryColumn('', 'lines', 'geom', -1, 'LINESTRING' , 2);
+\d lines;
+select count(*) from lines;
+
+
+INSERT INTO lines (id, geom) VALUES (1 ,ST_GeomFromText('LINESTRING(0 0,1 1,2 2 , 3 3)',0));
+INSERT INTO lines (id, geom) VALUES (2 ,ST_GeomFromText('LINESTRING(0 0,0 1, 0 2 ,0 3)',0));
+INSERT INTO lines (id, geom) VALUES (3 ,ST_GeomFromText('LINESTRING(0 0,1 0, 2 0, 3 0 )',0));
+
+
+SELECT ST_AsText(geom)  FROM lines;
+
+
+SELECT id, ST_AsText(geom) FROM lines WHERE  geom && ST_MakeEnvelope(1, 1, 2, 2, 0);
+SELECT id, ST_AsText(geom) FROM lines WHERE  geom && ST_MakeEnvelope(0, 0, 1, 1, 0);
+
+
+SELECT id, ST_AsText(geom) FROM polygon_2 WHERE  geom && ST_MakeEnvelope(1, 1, 2, 2, 0);
+
+SELECT id, ST_AsText(geom) FROM polygon_2 WHERE geom && ST_MakeEnvelope(1.5, 3.5, 1.8, 3.8, 0);
+
+
+SELECT id,street_name, ST_AsText(point_list) FROM streets WHERE point_list && ST_MakeEnvelope(1.5, 3.5, 1.8, 3.8, 0);
+
+#+end_src
+
+* 空间函数
+
+1,基本操作函数
+
+
+AddGeometryColumn(<schema_name>, <table_name>, <column_name>, <srid>, <type>, <dimension>)
+给一个已存在属性数据表增加一个几何字段(geomtry column)。schema_name 指表的模式的名字，srid 必须是一个整数指对应于 SPATIAL_REF_SYS 表，type必须是一个大写的字符串，用来描述几何类型，例如：'POLYGON' 或者 'MULTILINESTRING'。
+
+DropGeometryColumn(<schema_name>, <table_name>, <column_name>)
+从一个空间数据表中删除一个几何字段。
+
+ST_SetSRID(geometry, integer)
+给一个几何对象(geometry)设置一个整型的SRID，对于在一个范围内的查询非常有用。 
+
+2. Geometry Relationship Functions 
+几何空间数据关系函数
+
+ST_Distance(geometry, geometry) 
+返回两个几何对象的距离（笛卡儿距离），不使用索引。 
+
+ST_DWithid(geometry, geometry, float) 
+如果一个几何对象(geometry)在另一个几何对象描述的距离(float)内，返回TRUE。如果有索引，会用到索引。 
+
+ST_Equals(geometry, geometry)
+如果两个空间对象相等，则返回TRUE。用这个函数比用“=”更好，例如：
+equals('LINESTRING(0 0, 10 10)','LINESTRING(0 0, 5 5, 10 10)') 返回 TRUE。
+
+ST_Disjoint(geometry, geometry)
+如果两个对象不相连，则返回TRUE。不要使用GeometryCollection作为参数。
+
+ST_Intersects(geometry, geometry)
+判断两个几何空间数据是否相交,如果相交返回true,不要使用GeometryCollection作为参数。
+Intersects(g1, g2 ) --> Not (Disjoint(g1, g2 ))
+不使用索引可以用_ST_Intersects.
+
+ST_Touches(geometry, geometry)
+如果两个几何空间对象存在接触，则返回TRUE。不要使用GeometryCollection作为参数。
+a.Touches(b) -> (I(a) intersection I(b) = {empty set} ) and (a intersection b) not empty
+不使用索引可以用_ST_Touches.
+
+ST_Crosses(geometry, geometry)
+如果两个几何空间对象存在交叉，则返回TRUE。不要使用GeometryCollection作为参数。
+不使用索引可以用_ST_Crosses.
+
+ST_Within(geometry A, geometry B)
+如果几何空间对象A存在空间对象B中,则返回TRUE,不要使用GeometryCollection作为参数。
+不使用索引可以用_ST_Within
+
+ST_Overlaps(geometry, geometry)
+如果两个几何空间数据存在交迭,则返回 TRUE,不要使用GeometryCollection作为参数。
+不使用索引可以用_ST_Overlaps.
+
+ST_Contains(geometry A, geometry B)
+如果几何空间对象A包含空间对象B,则返回 TRUE,不要使用GeometryCollection作为参数。
+这个函数类似于ST_Within(geometry B, geometry A)
+不使用索引可以用_ST_Contains.
+
+ST_Covers(geometry A, geometry B)
+如果几何空间对象B中的所有点都在空间对象A中,则返回 TRUE。
+不要使用GeometryCollection作为参数。
+不使用索引可以用_ST_Covers.
+
+ST_CoveredBy(geometry A, geometry B)
+如果几何空间对象A中的所有点都在空间对象B中,则返回 TRUE。
+
+3,Geometry Processing Functions
+几何空间数据处理函数
+
+ST_Centroid(geometry)
+返回质心点,就是根据几何空间数据,活动该几何空间数据的中心点,返回一个空间点数据.
+
+ST_Area(geometry)
+如果几何空间数据为多边形,或者多多边形,则返回空间数据的外围(返回类型double precision) ;
+
+ST_Length(geometry)
+这个曲线在其相关的空间参考长度(返回类型double precision) ;
+
+ST_PointOnSurface(geometry)
+一定在几何空间线数据上的点，返回一个数据点
+
+ST_Buffer(geometry, double, [integer])
+buffer操作一个很有用函数，
+这个函数的第一个参数是要操作的空间几何数据，第二个参数长度（距离），第三个参数为一个整型，
+这个函数返回一个空间数据类型，以当前第一个参数空间几何数据为参考点，返回小于等于距离的空间
+
+几何数据点，最后由这些点组成一个多边形空间数据，最后一个参数表示
+在组成一个1/4圆的有几个点分隔。也就是说如果最好一个参数为8那么这个最后组成的多边形就是32边
+
+的多边形，如果不指定这个参数，系统默认的是8
+注意：第二个参数，距离它的单位为空间数据单位（度），在运算时需要进行单位换算，最后转换成度
+
+，单位的换算关系如下：
+1英里 = 63360 米
+1米=1/1852 海里
+1海里= 1/60度
+如果要进行具体的运算，需要进行一下单位换算，比如要求一个500米的范围，那么应该是
+
+500*1/1852*1/60（度）
+
+ST_Envelope(geometry)
+这个函数可以返回mbr(空间最小外包矩形)，传入参数可以是point line polygon。
+
+
+ST_extent(geometry set)
+这个函数可以对一个空间数据集进行操作，返回一个最小包含矩形（mbr）.
+如：SELECT EXTENT(GEOM) FROM GEOMTABLE GROUP BY CATEGORY
+
+
+ST_Difference(geometry A, geometry B)
+返回一个几何空间数据A不同于空间数据B的几何空间数据类型，不要使用GeometryCollection作为参数。
+也就是说，如果A为一个line,B也为一个line，那么他们返回的类型就是B把A分割的多线。
+如：
+select ST_AsEWKT(ST_Difference(geomfromText('LINESTRING(1 1,2 3,3 4,3 1)'),geomfromText('LINESTRING(2 0,2 2,5 2,3 1)')))
+返回的MULTILINESTRING((1 1,2 3,3 4,3 2),(3 2,3 1))
+如果是A和B都是一个POLYGON多边形，那么返回的就是多多边形，如果相交，那么返回的就是B把A分割，并且不再B中的多多边形。
+select ST_AsEWKT(ST_Difference(geomfromText('POLYGON((1 1,2 3,3 4,3 1,1 1))'),geomfromText('POLYGON((2 0,2 2,5 2,1 3,2 0))')))
+
+ST_Union(geometry, geometry)
+返回一个合并的几何空间数据，将两个几何空间数据合并为一个几何空间数据，或者GeometryCollection，不要使用GeometryCollection作为参数。
+
+
+4 ，Geometry Accessors
+
+ST_AsText(geometry)
+将几何空间数据，转换成容易理解的空间数据文本格式，
+例如：
+(0,0 0,1 1,1 1,0 0,0)
+转换后应该是这样的结果 POLYGON(0 0,0 1,1 1,1 0,0 0)
+
+ST_SRID(geometry)
+返回当前几何空间数据的SRID值
+
+ST_IsClosed(geometry)
+判断几何空间数据是否是闭合，就是判断起始点和终点坐标是相同的，如果是相同的返回true,否则返回false.
+
+ST_IsRing(geometry)
+这个函数参数的对象是line，判断起始点和终点坐标是否相同，
+如果闭合(这个曲线除了起始点和终点相同外，没有其他相交点)怎返回true,否则false,
+
+ST_NumPoints(geometry)
+返回几何空间数据lineString上的第一条线上点的个数。
+
+
+GeometryType(geometry)
+判断几何空间数据的类型。
+例如
+select GeometryType(geomfromText('MULTILINESTRING((1 1,2 3,3 4,3 1,2 1,1 1),(1 2,2 3,4 5))'))
+返回的类型为 MULTILINESTRING。
+
+关于每个polygon过大，致使程序处理超级慢的问题解决：
+
+用geometry ST_Scale(geometry geomA, float XFactor, float YFactor);函数，对原始geometry切割，插入到新的数据表中，这样就变成了对小polygon的处理
+
+* 数据的导入和导出
+
+如何导出PostgreSQL数据库中的数据：
+
+pg_dump -U postgres -f chengdu.sql chengdu
+
+pg_dump -U postgres -f dump.sql mydatabase
+pg_dump -U zhuoyikang -f dujiangyan.sql dujiangyan
+具体某个表
+pg_dump -U postgres -t mytable -f dump.sql mydatabase
+
+导入数据时首先创建数据库再用psql导入：
+createdb newdatabase
+psql -d newdatabase -U postgres -f dump.sql
+
+* PostGis In Action
+
+创建
+
+update blocks set shape_u3d = geomfromText('');
+
+
+cat polygon.txt |awk -F ', ' '{print $2  }'
+
+cat polygon.txt |awk -F ', ' '{print "update blocks set shape_u3d = geomfromText("$2") where id = ", $1}'
+* 配置远程访问
+
+http://blog.csdn.net/ll136078/article/details/12747403
+
+下面 介绍配置的步骤：
+
+1.修改pg_hba.conf文件，配置用户的访问权限（#开头的行是注释内容）：
+
+找到文件位置
+
+#+begin_src sh
+find / -name 'pg_hba.conf' 2>/dev/null
+#+end_src
+cent os : /var/lib/pgsql/9.4/data/pg_hba.conf
+mac os x :
+
+
+
+#+begin_src sh
+# TYPE DATABASE  USER    CIDR-ADDRESS     METHOD
+# "local" is for Unix domain socket connections only
+local all    all               trust
+# IPv4 local connections:
+host  all    all    127.0.0.1/32     trust
+host  all    all    192.168.1.0/24    md5
+# IPv6 local connections:
+host  all    all    ::1/128       trust
+#+end_src
+
+其中，第7条是新添加的内容，表示允许网段192.168.1.0上的所有主机使用所有合法的数据库用户名访问数据库，并提供加密的密码验证。
+其中，数字24是子网掩码，表示允许192.168.1.0--192.168.1.255的计算机访问！
+ 
+2.修改postgresql.conf文件，将数据库服务器的监听模式修改为监听所有主机发出的连接请求。
+
+find / -name 'postgresql.conf' 2>/dev/null
+
+
+定位到#listen_addresses=’localhost’。PostgreSQL安装完成后，默认是只接受来在本机localhost的连接请求。
+将行开头都#去掉，将行内容修改为listen_addresses=’*'来允许数据库服务器监听来自任何主机的连接请求
+
+* 创建密码|修改密码
+
+#+begin_src erlang
+psql -U postgres   
+postgres=#alter user postgres with password 'new password';  
+postgres=#\q  
+#+end_src
+
+** 1. 修改PostgreSQL数据库默认用户postgres的密码
+PostgreSQL数据库创建一个postgres用户作为数据库的管理员，密码随机，所以需要修改密码，方式如下：
+
+步骤一：登录PostgreSQL
+
+1
+sudo -u postgres psql
+步骤二：修改登录PostgreSQL密码
+
+1
+ALTER USER postgres WITH PASSWORD 'postgres';
+注：
+
+密码postgres要用引号引起来
+命令最后有分号
+步骤三：退出PostgreSQL客户端
+
+\q
+
+** 2. 修改linux系统postgres用户的密码
+PostgreSQL会创建一个默认的linux用户postgres，修改该用户密码的方法如下：
+
+步骤一：删除用户postgres的密码
+
+sudo  passwd -d postgres
+步骤二：设置用户postgres的密码
+
+sudo -u postgres passwd
+系统提示输入新的密码
+
+Enter new UNIX password:
+Retype new UNIX password:
+passwd: password updated successfully
+
+* cent os 上安装
+
+#+begin_src sh
+  # 安装postgresql
+
+  centos
+
+  rpm -Uvh http://yum.postgresql.org/9.4/redhat/rhel-7-x86_64/pgdg-centos94-9.4-1.noarch.rpm;
+  yum update;
+  yum -y install postgresql94-server postgresql94-contrib;
+  
+  /usr/pgsql-9.4/bin/postgresql94-setup initdb;
+  systemctl enable postgresql-9.4;
+  systemctl restart postgresql-9.4;
+
+  yum -y install epel-release
+  sudo yum install postgis2_94
+
+  echo "end init operating environment!";
+
+  ubuntu 安装
+  http://trac.osgeo.org/postgis/wiki/UsersWikiPostGIS22UbuntuPGSQL95Apt
+
+#+end_src
+
+
+
+#+begin_src sql
+-- Enable PostGIS (includes raster)
+CREATE EXTENSION postgis;
+-- Enable Topology
+CREATE EXTENSION postgis_topology;
+-- Enable PostGIS Advanced 3D 
+-- and other geoprocessing algorithms
+-- sfcgal not available with all distributions
+CREATE EXTENSION postgis_sfcgal;
+-- fuzzy matching needed for Tiger
+CREATE EXTENSION fuzzystrmatch;
+-- rule based standardizer
+CREATE EXTENSION address_standardizer;
+-- example rule data set
+CREATE EXTENSION address_standardizer_data_us;
+-- Enable US Tiger Geocoder
+CREATE EXTENSION postgis_tiger_geocoder;
+#+end_src
+
+* 建立索引的语法
+CREATE INDEX test2_mm_idx ON test2 (major, minor);
+
+http://blog.sina.com.cn/s/blog_6af33caa0100ypck.html
+
+
+SELECT id, center  FROM blocks WHERE   shape_u3d && ST_MakeEnvelope(0,0,100,100);
+
+
+{-5069.421, -5369.095}  {-4569.421,-4869.095}
+{-4569.421, -5369.095}  {-4069.421,-4869.095}
+
+
+SELECT id, ST_AsText(shape_u3d) FROM blocks WHERE shape_u3d && ST_MakeEnvelope(800, -400, 1200, 0, 0);
+
+
+
+
+SELECT id, ST_AsText(shape_u3d) FROM blocks WHERE shape_u3d && ST_MakeEnvelope(800, -400, 1200, 0, 0) AND 
+ST_Intersects(ST_MakeEnvelope(800, -400, 1200, 0, 0), shape_u3d)
+
+POLYGON((-2930.5789999999997 -1630.9049999999997,-2930.5789999999997 -1630.9049999999997,-2430.5789999999997 -1130.9049999999997,-2430.5789999999997 -1630.9049999999997,-2930.5789999999997 -1630.9049999999997))
+
+
+-2680.5789999999997,0,-1380.9049999999997
+
+id = '0280_15_13'
+
+
+POLYGON((-2930.5789999999997 -1630.9049999999997,-2930.5789999999997 -1130.9049999999997,-2430.5789999999997 -1130.9049999999997,-2430.5789999999997 -1630.9049999999997,-2930.5789999999997 -1630.9049999999997))
+
+
+15_13 坐标 -150  -1581
+
+
+15 13 
+
+15 13 
+-1930.5789999999997,0,-2630.9049999999997
+-1430.5789999999997,0,-2130.9049999999997

@@ -1,0 +1,21 @@
+https://about.gitlab.com/downloads/#centos7
+
+ 国内镜像
+CentOS/RHEL
+新建 /etc/yum.repos.d/gitlab-ce.repo，内容为
+
+你的CentOS/RHEL版本:   
+[gitlab-ce]
+name=gitlab-ce
+baseurl=http://mirrors.tuna.tsinghua.edu.cn/gitlab-ce/yum/el7
+repo_gpgcheck=0
+gpgcheck=0
+enabled=1
+gpgkey=https://packages.gitlab.com/gpg.key
+再执行
+
+sudo yum makecache
+sudo yum install gitlab-ce
+
+
+sudo gitlab-ctl reconfigure

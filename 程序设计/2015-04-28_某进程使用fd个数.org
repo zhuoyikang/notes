@@ -1,0 +1,10 @@
+#+SETUPFILE: ../css/level-1.orgcss
+#+TITLE: Linux:查看某进程使用fd个数
+
+#+begin_src sh
+lsof -n|awk '{print $2}'|sort|uniq -c|sort -nr  | grep 17310
+
+sudo lsof -p 31038 -i tcp
+#+end_src
+
+[[http://linuxtools-rst.readthedocs.org/zh_CN/latest/index.html][Linux Tools Quick Tutorial]]

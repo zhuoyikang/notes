@@ -1,0 +1,250 @@
+* 主要功能介绍
++ [[http://www.cnblogs.com/sharpxiajun/archive/2013/06/02/3113923.html][参考文章1 ]]
++ [[http://www.ibm.com/developerworks/cn/data/library/bd-zookeeper/][ZooKeeper 基础知识、部署和应用程序-IBM]]
++ [[https://www.zhihu.com/question/35139415][ZooKeeper & kazoo]]
++ [[https://www.nginx.com/blog/nginx-and-zookeeper-dynamic-load-balancing-and-deployments/][NGINX and Zookeeper, Dynamic Load Balancing and Deployments]]
+
+** 统一命名服务
+
+名称服务是将一个名称映射到与该名称有关联的一些信息的服务。
+
+** 分布式锁服务
+
+*** 锁定 
+为了允许在分布式系统中对共享资源进行有序的访问，可能需要实现分布式互斥（distributed mutexes）。ZooKeeper 提供一种简单的方式来实现它们
+
+*** 同步
+与互斥同时出现的是同步访问共享资源的需求。无论是实现一个生产者-消费者队列，还是实现一个障碍，ZooKeeper 都提供一个简单的接口来实现该操作。您可以在 Apache ZooKeeper 维基上查看示例，了解如何做到这一点（参阅 参考资料）。
+
+** 配置管理
+
+将集群的配置文件拷贝到zookeeper的文件系统的某个节点上，然后用zookeeper监控所有分布式系统里配置文件的状态，一旦发现有配置文件发生了变化，每台服务器都会收到zookeeper的通知，让每台服务器同步zookeeper里的配置文件，zookeeper服务也会保证同步操作原子性，确保每个服务器的配置文件都能被正确的更新。
+
+** 领导选举
+
+布式系统可能必须处理节点停机的问题，您可能想实现一个自动故障转移策略。ZooKeeper 通过领导者选举对此提供现成的支持。
+* 基本使用
+** 设置并部署 ZooKeeper 集合体
+
+1.下载并解压:http://zookeeper.apache.org/releases.html
+
+#+begin_src sh
+wget http://ftp.jaist.ac.jp/pub/apache/zookeeper/zookeeper-3.4.8/zookeeper-3.4.8.tar.gz
+#+end_src
+
+2.创建一个目录，用它来存储与 ZooKeeper 服务器有关联的一些状态：mkdir /var/lib/zookeeper。您可能需要将这个目录创建为根目录，并在以后将这个目录的所有者更改为您希望运行 ZooKeeper 服务器的用户。
+
+#+begin_src sh
+mkdir /var/lib/zookeeper
+#+end_src
+
+3.设置配置。创建或编辑 zookeeper3.4.5/conf/zoo.cfg 文件
+
+#+begin_src sh
+tickTime=2000
+dataDir=/var/lib/zookeeper clientPort=2181
+initLimit=5 syncLimit=2
+server.1=zkserver1.mybiz.com:2888:3888
+server.2=zkserver2.mybiz.com:2888:3888
+server.3=zkserver3.mybiz.com:2888:3888
+
+server.1=localhost:2888:3888
+#+end_src
+
+
+4. 现在，您已经做好了在每台机器上启动 ZooKeeper 服务器的准备。 启动 ZooKeeper 服务器
+
+#+begin_src sh
+zookeeper3.4.5/bin/zkServer.sh start
+#+end_src
+
+现在，您可以从其中一台正在运行 ZooKeeper 服务器的机器上启动一个 CLI 客户端。
+
+#+begin_src sh
+zookeeper3.4.5/bin/zkCli.sh server
+zkserver1.mybiz.com:2181,zkserver2.mybiz.com:2181,zkserver3.mybiz.com:2181
+
+# 客户端.
+sudo ./zkCli.sh
+#+end_src
+
+** 基本的使用
+
+#+begin_src sh
+[zk: localhost:2181(CONNECTED) 16] create /zk_test my_data
+Created /zk_test
+
+[zk: localhost:2181(CONNECTED) 16] ls  /
+[zookeeper, zk_test]
+
+[zk: localhost:2181(CONNECTED) 16] get /zk_test
+my_data
+cZxid = 0x2
+ctime = Tue Jun 28 11:32:18 CST 2016
+mZxid = 0x2
+mtime = Tue Jun 28 11:32:18 CST 2016
+pZxid = 0x2
+cversion = 0
+dataVersion = 0
+aclVersion = 0
+ephemeralOwner = 0x0
+dataLength = 7
+numChildren = 0
+#+end_src
+
+
+在讲解这些参数之前先介绍一下一个概念：
+
+ZooKeeper以多种方式跟踪时间
+
++ zxid：每次修改ZooKeeper状态都会收到一个zxid形式的时间戳，也就是ZooKeeper事务ID。事务ID是ZooKeeper中所有修改总的次序。每个修改都有唯一的zxid，如果zxid1小于zxid2，那么zxid1在zxid2之前发生。
+版本号：对节点的每次修改将使得节点的版本号增加一。版本号有三种：version（znode数据修改的次数）、cversion（znode子节点修改的次数），以及aversion（znode的ACL修改次数）。
+- tick：多服务器ZooKeeper中，服务器使用tick来定义状态上传、会话超时、节点间连接超时等事件的时序。tick仅被最小会话超时（2倍的tick时间)间接使用：如果客户端要求小于最小会话超时的时间，服务器将告知客户端，实际使用的是最小会话超时。
+- 真实时间：除了在创建和修改znode时将时间戳放入stat结构体中之外，ZooKeeper不使用真实时间，或者说时钟时间。
+
+
+get获得的参数的意思是->
+
+
++ czxid：创建节点的事务的zxid
++ mzxid：对znode最近修改的zxid
++ ctime：以距离时间原点(epoch)的毫秒数表示的znode创建时间
++ mtime：以距离时间原点(epoch)的毫秒数表示的znode最近修改时间
++ pzxid：子节点的最后版本
++ cversion：znode子节点修改次数
++ dataVersion：数据的版本
++ aclVersion：znode的ACL修改次数
++ ephemeralOwner：如果znode是临时节点，则指示节点所有者的会话ID；如果不是临时节点，则为零。
++ dataLength：znode数据长度。
++ numChildren：znode子节点个数。
+
+
+*什么是ACL ?*
+
+ZooKeeper使用ACL控制对节点的访问。ACL的实现同Unix文件访问权限非常相似：采用权限位来定义允许/禁止的各种节点操作，以及位应用的范围。与标准Unix权限不同的是，ZooKeeper节点不由用户(文件所有者)、组和其他这三个标准范围来限制。ZooKeeper没有节点所有者的概念。取而代之的是，ACL指定一个ID集合，以及与这些ID相关联的权限。
+
+还要注意的是，ACL仅仅用于某特定节点。特别是，ACL不会应用到子节点。比如说，/app只能被ip:172.16.16.1读取，/app/status可以被所有用户读取。ACL不是递归的。ZooKeeper支持可插入式鉴权模式。使用scheme:id的形式指定ID，其中scheme是id对应的鉴权模式。比如说，ip:172.16.16.1是地址为172.16.16.1的主机的ID。
+
+客户端连接到ZooKeeper，验证自身的时候，ZooKeeper将所有对应客户端的ID都关联到客户端连接上。客户端试图存取节点的时候，ZooKeeper会在节点的ACL中校验这些ID。ACL由(scheme:expression,perms)对组成。expression的格式是特定于scheme的。比如说，(ip:19.22.0.0/16,READ)给予任何IP地址以19.22开头的客户端以READ权限。
+
+* 编程
+
+** zk驱动: https://github.com/huaban/erlzk
+erlzk is A Pure Erlang ZooKeeper Client (no C dependency).
+
+#+begin_src sh
+git clone https://github.com/huaban/erlzk.git
+make
+erl -pa ebin
+
+> erlzk:start().
+> {ok, Pid} = erlzk:connect([{"localhost", 2181}], 30000).
+#+end_src
+
+例子代码:
+
+#+begin_src erlang
+% Include the hrl first
+-include_lib("erlzk/include/erlzk.hrl").
+
+% Create a node with the given path, return the actual path of the node
+{ok, "/a"} = erlzk:create(Pid, "/a").
+
+% Determine if a node exists, return the stat of the node
+{ok, Stat} = erlzk:exists(Pid, "/a").
+
+% Update the data for a given node, use the current version of the node for data security
+{ok, _Stat} = erlzk:set_data(Pid, "/a", <<"b">>, Stat#stat.version).
+
+% Get the data of the node
+{ok, {<<"b">>, _Stat}} = erlzk:get_data(Pid, "/a").
+
+% Add a auth, username is "foo", password is "bar"
+ok = erlzk:add_auth(Pid, "foo", "bar").
+
+% Set the ACL of the node, now only the creator has all the permissions
+{ok, _Stat} = erlzk:set_acl(Pid, "/a", ?ZK_ACL_CREATOR_ALL_ACL).
+
+% Get the ACL of the node, Acl should equals to [{rwcdr,"digest",erlzk:generate_digest("foo", "bar")}]
+{ok, {Acl, _Stat}} = erlzk:get_acl(Pid, "/a")).
+
+% Create some children of the node
+{ok, "/a/a0000000000"} = erlzk:create(P, "/a/a", persistent_sequential).
+{ok, "/a/b"} = erlzk:create(P, "/a/b").
+
+
+% Get the children of the node, Children should include "a0000000000" and "b"
+{ok, Children} = erlzk:get_children(P, "/a").
+
+% Delete the node, delete all the children before parent
+ok = erlzk:delete(Pid, "/a/a0000000000").
+ok = erlzk:delete(Pid, "/a/b").
+ok = erlzk:delete(Pid, "/a").
+#+end_src
+
+watcher
+
+#+begin_src erlang
+  % set an exists watch
+  erlzk:exists(Pid, "/platform/filter/1", spawn(fun() ->
+          receive
+              % receive a watch event
+              {Event, Path} ->
+              io:format("event ~p path ~p", [Event, Path])
+          end
+          end)),
+  % create a node trigger the watch
+  {ok, "/a"} = erlzk:create(Pid, "/a").
+
+
+  Wather = spawn(fun() ->
+      receive
+          % receive a node deleted event
+          {Event, Path} ->
+              Path = "/a",
+              Event = node_deleted
+      end
+  end),
+
+  {ok, "/a"} = erlzk:create(Pid, "/a"),
+
+  % call exists and get_data to a same path with a same watcher
+  erlzk:exists(Pid, "/a", Watcher),
+  erlzk:get_data(Pid, "/a", Watcher),
+
+  % delete the node will trigger the watcher once
+  erlzk:delete(Pid, "/a").
+
+#+end_src
+
+** ZooKeeper Programmer's Guide
+
+https://zookeeper.apache.org/doc/trunk/zookeeperProgrammers.html
+
+** 如何识别到注册的server挂掉
+
+它们的实现方式都是在 Zookeeper 上创建一个 EPHEMERAL 类型的目录节点，然后每个 Server 在它们创建目录节点的父目录节点上调用 getChildren(String path, boolean watch) 方法并设置 watch 为 true，由于是 EPHEMERAL 目录节点，当创建它的 Server 死去，这个目录节点也随之被删除，所以 Children 将会变化，这时 getChildren上的 Watch 将会被调用，所以其它 Server 就知道已经有某台 Server 死去了。新增 Server 也是同样的原理。
+
+#+begin_src erlang
+{ok, "/a"} = erlzk:create(Pid, "/a/x", ephemeral).
+#+end_src
+
+* 命名服务
+
+命名服务是指通过指定的名字来获取资源或者服务的地址，提供者的信息。利用Zookeeper很容易创建一个全局的路径，而这个路径就可以作为一个名字，它可以指向集群中的集群，提供的服务的地址，远程对象等。简单来说使用Zookeeper做命名服务就是用路径作为名字，路径上的数据就是其名字指向的实体。
+
+阿里巴巴集团开源的分布式服务框架Dubbo中使用ZooKeeper来作为其命名服务，维护全局的服务地址列表。在Dubbo实现中：
+
+服务提供者在启动的时候，向ZK上的指定节点/dubbo/${serviceName}/providers目录下写入自己的URL地址，这个操作就完成了服务的发布。
+
+服务消费者启动的时候，订阅/dubbo/{serviceName}/providers目录下的提供者URL地址， 并向/dubbo/{serviceName} /consumers目录下写入自己的URL地址。
+
+注意，所有向ZK上注册的地址都是临时节点，这样就能够保证服务提供者和消费者能够自动感应资源的变化。
+
+另外，Dubbo还有针对服务粒度的监控，方法是订阅/dubbo/{serviceName}目录下所有提供者和消费者的信息。
+
+* dubbo
+
+dubbo是一个分布式服务框架，致力于提供高性能和透明化的RPC远程服务调用方案，是阿里巴巴SOA服务化治理方案的核心框架，每天为2,000+个服务提供3,000,000,000+次访问量支持，并被广泛应用于阿里巴巴集团的各成员站点。
+
+

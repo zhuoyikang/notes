@@ -1,0 +1,104 @@
+#+SETUPFILE: ../css/level-1.orgcss
+#+TITLE: Git:笔记
+
+* Git常用配置
+
+下面的命令将修改/home/[username]/.gitconfig文件，也就是说下面的配置只对每一个ssh的用户可见，所以每个人都需要做。
+
+提交代码的log里面会显示提交者的信息
+
+#+begin_src bash
+
+git config --global user.name zhuoyikang
+git config --global user.email zhuoyikang@gmail.com
+
+git config --global user.name segrall
+git config --global user.email segrallx@gmail.com
+
+#+end_src
+
+* 在git命令中开启颜色显示
+
+#+begin_src bash
+git config --global color.ui true
+#+end_src
+
+* git log中文文件名乱码
+
+#+begin_src bash
+git config core.quotepath false
+git config --global core.quotepath false: git status乱码
+core.quotepath设为false的话，就不会对0x80以上的字符进行quote。中文显示正常
+#+end_src
+
+* OSX 10.10 yosemite beta on git pull: git-sh-setup: No such file or directory
+
+
+I think the cleanest solution for this for now is to change the initial command in your iTerm session to be
+
+/usr/bin/login -f <your user name>
+This fixes the issue for me.
+
+A further data point for analysis of the issue: It seems that in 10.10, multiple copies of the PATH environment variable exist and subshells seem to prefer the second copy.
+
+You can reproduce this by launching any cocoa application on the console as launched by iTerm. You'll get a warning that looks like this:
+
+2014-06-04 19:23:09.859 gitx[14676:362580] *** -[NSProcessInfo environment]: Warning: duplicate definition for key 'PATH' found in environment -- subsequent definitions are ignored.  The first definition was '(the path I have configured in my shell)', the ignored definition is '/usr/bin:/bin:/usr/sbin:/sbin'.
+I believe this to be a problem in 10.10 and not iTerm, but something iTerm is doing is causing it to manifest itself (this doesn't happen in Terminal.app)
+
+Update: This is caused by iTerm doing "interesting" stuff to the environment. Update to the official release of iTerm 2.0 to make this problem go away.
+
+* How to use git pull without entering the passphrase
+
+You can use ssh-keygen -p to change the pass phrase on the key, including setting no pass phrase
+
+#+begin_src bash
+ssh-keygen -p
+Enter file in which the key is (/home/iain/.ssh/id_rsa): /home/iain/.ssh/tmp/id_rsa
+Enter old passphrase: <existing pass phrase>
+Key has comment '/home/iain/.ssh/tmp/id_rsa'
+Enter new passphrase (empty for no passphrase):
+Enter same passphrase again:
+Your identification has been saved with the new passphrase.
+If you use this key for other things you may be safer generating a keypair just for your program to use.
+#+end_src
+
+* git 设置远程仓库地址
+
+git remote set-url origin git@10.0.4.230:galaxy-empire-gateway-2.git
+
+git remote set-url origin git@git.tap4fun.com:gl2/gl2_restc.git
+
+git@git.tap4fun.com:gl2/mail_client.git
+git@git.tap4fun.com:gl2/gl2_restc.git
+git@git.tap4fun.com:gl2/gl2_pf.git
+
+
+git remote set-url origin git@git.tap4fun.com:gl2/mail_server.git
+
+* 修改git author
+
+https://help.github.com/articles/changing-author-info/
+
+#+begin_src shell
+#!/bin/sh
+
+git filter-branch --env-filter '
+
+OLD_EMAIL="segrallx@gmail.com"
+CORRECT_NAME="zhuoyikang"
+CORRECT_EMAIL="zhuoyikang@nibirutech.com"
+
+if [ "$GIT_COMMITTER_EMAIL" = "$OLD_EMAIL" ]
+then
+    export GIT_COMMITTER_NAME="$CORRECT_NAME"
+    export GIT_COMMITTER_EMAIL="$CORRECT_EMAIL"
+fi
+if [ "$GIT_AUTHOR_EMAIL" = "$OLD_EMAIL" ]
+then
+    export GIT_AUTHOR_NAME="$CORRECT_NAME"
+    export GIT_AUTHOR_EMAIL="$CORRECT_EMAIL"
+fi
+' --tag-name-filter cat -- --branches --tags
+
+#+end_src
