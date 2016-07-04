@@ -5,7 +5,6 @@
 #+HTML_HEAD: <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
 #+HTML_HEAD: <script type="text/javascript" src="http://www.pirilampo.org/styles/lib/js/jquery.stickytableheaders.js"></script>
 #+HTML_HEAD: <script type="text/javascript" src="http://www.pirilampo.org/styles/readtheorg/js/readtheorg.js"></script>
-
 #+OPTIONS: ^:nil
 
 一个云服务平台需要的基本功能
@@ -213,7 +212,7 @@ Pivotal最近发布了Spring Cloud 1.0开放源码库，[[http://www.infoq.com/c
 + 云平台连接器（Cloud Connector）
 + 服务连接器（Service Connector
 
-** 特性:
+** 特性
 
 它为基于JVM的云应用开发中的
 + 配置管理、
@@ -227,7 +226,7 @@ Pivotal最近发布了Spring Cloud 1.0开放源码库，[[http://www.infoq.com/c
 + 分布式会话和集群状态管理
 等操作提供了一种简单的开发方式
 
-** Spring Cloud 1.0正式版所实现的主要改进内容包括 ->
+** Spring Cloud 1.0正式版所实现的主要改进内容包括
 
 + Spring Cloud Config子项目支持使用Git配置客服务器
 + Spring Cloud Config子项目支持客户端的配置信息刷新、加密/解密配置、基于Spring应用的声明周期阶段配置
@@ -269,6 +268,10 @@ http://dockone.io/article/394
 ** 使用API Gateway
 
 http://dockone.io/article/482
+
+
+[[http://dockerone.com/uploads/article/20150701/e3af5a60b71f3d3fef53c1a5ccbfad78.png]]
+
 
 *** 客户端到微服务直接通信
 
