@@ -935,3 +935,18 @@ POLYGON((-2930.5789999999997 -1630.9049999999997,-2930.5789999999997 -1130.90499
 15 13 
 -1930.5789999999997,0,-2630.9049999999997
 -1430.5789999999997,0,-2130.9049999999997
+* cent os 上使用
+
+
+createuser zhuoyikang
+dropdb chengdu
+createdb -U zhuoyikang -T template_postgis chengdu
+psql -d chengdu -U zhuoyikang -f db.sql
+psql -d chengdu -U zhuoyikang -f data.sql
+```
+
+su - postgres
+psql
+
+sudo -u postgres psql
+

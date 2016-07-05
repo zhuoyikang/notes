@@ -27,12 +27,13 @@ XI. Logs
 XII. Admin processes
 管理任务作为一次性的过程运行（使用脚本管理服务启动和停止）。
 
-
-
 * 使用Spring Cloud和Docker构建微服务
 
-Configuration Service
+用例子来说明，非常方便入门 http://www.dockone.io/article/510
 
+Configuration Service
 Discovery Service
 Circuit breakers
 Distributed sessions
+
+

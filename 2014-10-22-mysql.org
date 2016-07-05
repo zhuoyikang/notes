@@ -116,4 +116,26 @@ WHERE t1.id >= t2.id
 ORDER BY t1.id ASC LIMIT 5;
 #+end_src
 
+* 允许跨机器访问
 
+#+begin_src sql
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY '123456' WITH GRANT OPTION;
+FLUSH PRIVILEGES;
+#+end_src
+
+* osx上修改mysql配置
+
+By default, the OS X installation does not use a my.cnf, and MySQL just uses the default values. To set up your own my.cnf, you could just create a file straight in /etc.
+
+sudo cp /usr/local/opt/mysql/support-files/my-default.cnf   /etc/my.cnf
+
+copy 为/etc/my.cnf
+
+* mac mysql 重启
+
+sudo /usr/local/mysql/support-files/mysql.server start
+sudo /usr/local/mysql/support-files/mysql.server stop
+sudo /usr/local/opt/mysql/support-files/mysql.server restart
+
+* mysql 详细配置
+http://database.51cto.com/art/201108/285365.htm

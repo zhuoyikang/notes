@@ -40,7 +40,6 @@ CREATE EXTENSION postgis;
 CREATE EXTENSION postgis_topology;
 
 
-
 * 修改hostname
 
 CentOS 修改主机名
@@ -71,9 +70,7 @@ HOSTNAME=localhost.localdomain  #修改localhost.localdomain为orcl1
 
 这个是永久修改，重启后生效。目前不知道怎么立即生效。
 
-想立即生效，可以同时采用第一种方法。
-
- 
+想立即生效，可以同时采用第一种方法。 
 
 步骤2：
 修改/etc/hosts文件
@@ -81,3 +78,34 @@ HOSTNAME=localhost.localdomain  #修改localhost.localdomain为orcl1
 vi /etc/hosts
 127.0.0.1    localhost.localdomain  #修改localhost.localdomain为orcl1
 shutdown -r now    #最后，重启服务器即可。
+* 查询当前安装的包 
+
+yum list installed | grep mysql
+yum -y install mysql-server mysql mysql-devel
+
+* 安装mysql/mariadb 
+
+1、方法一：安装mariadb
+
+MariaDB数据库管理系统是MySQL的一个分支，主要由开源社区在维护，采用GPL授权许可。开发这个分支的原因之一是：甲骨文公司收购了MySQL后，有将MySQL闭源的潜在风险，因此社区采用分支的方式来避开这个风险。MariaDB的目的是完全兼容MySQL，包括API和命令行，使之能轻松成为MySQL的代替品。
+
+安装mariadb，大小59 M。
+
+[root@yl-web yl]# yum install mariadb-server mariadb 
+mariadb数据库的相关命令是：
+
+systemctl start mariadb  #启动MariaDB
+systemctl stop mariadb  #停止MariaDB
+systemctl restart mariadb  #重启MariaDB
+systemctl enable mariadb  #设置开机启动
+
+systemctl start mariadb
+
+mysql -u root -p
+
+
+
+
+
+
+

@@ -66,6 +66,7 @@ ok
   文件路径结构
 
 #+begin_verse
+
   drwxr-xr-x  4 zhuoyikang 742773148 136 04-26 20:53 c_src
   drwxr-xr-x  4 zhuoyikang 742773148 136 04-26 20:53 ebin
   drwxr-xr-x  3 zhuoyikang 742773148 102 04-26 20:53 priv

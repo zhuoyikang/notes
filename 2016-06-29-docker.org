@@ -245,7 +245,20 @@ docker run -d --name db3 --volumes-from db1 training/postgres
 
 docker run -ti -v /data ubuntu /bin/bash 
 #+end_src
+* 数据卷Volume
+
+当我们启动一个容器的时候，Docker会加载只读镜像层并在其上（译者注：镜像栈顶部）添加一个读写层。如果运行中的容器修改了现有的一个已经存在的文件，那该文件将会从读写层下面的只读层复制到读写层，该文件的只读版本仍然存在，只是已经被读写层中该文件的副本所隐藏。当删除Docker容器，并通过该镜像重新启动时，之前的更改将会丢失。在Docker中，只读层及在顶部的读写层的组合被称为Union File System（联合文件系统）。
+
+了能够保存（持久化）数据以及共享容器间的数据，Docker提出了Volume的概念。简单来说，Volume就是目录或者文件，它可以绕过默认的联合文件系统，而以正常的文件或者目录的形式存在于宿主机上。
+
 * 实际操作
+
+** ubuntu
+
+docker run -ti ubuntu /bin/bash
+
+
+docker run -ti ubuntu /bin/bash -v /data
 
 ** nginx :https://hub.tenxcloud.com/repos/docker_library/nginx
 
@@ -257,6 +270,70 @@ docker run --name sphinx-nginx -v /Users/zhuoyikang/source/sphinx_demo/output:/u
 https://github.com/docker-library/php/blob/e37ca400ba0e1c34357bf06732bc77064e5a4941/5.5/apache/Dockerfile
 docker run --name sphinx-php -v /Users/zhuoyikang/source/sphinx_demo/output:/var/www/html:ro -d  -p 8071:80 php:5.5-apache
 
+** erlang
+
+docker run -ti  -v /Users/zhuoyikang/source/services/filter:/src \
+-p 8083:8083  \
+-p 3306:3306 \
+erlang:18.3 /bin/bash
+
+** postgres
+
+docker run -d --name kong-database \
+              -p 5432:5432 \
+              -e "POSTGRES_USER=kong" \
+              -e "POSTGRES_DB=kong" \
+              postgres:9.4
+** zookeeper 
+
+cd source/docker/zookeeper
+
+docker run --name zyk-zoo  -ti -p 2181:2181 -d  -v `pwd`/conf:/opt/zookeeper/conf -v `pwd`/data:/tmp/zookeeper jplock/zookeeper
+
+docker run --net=host  -d -ti  -v `pwd`/conf:/opt/zookeeper/conf -v `pwd`/data:/tmp/zookeeper jplock/zookeeper
+
+** mysql
+docker  run --name zyk-mysql -d -p 3306:3306 -e MYSQL_ROOT_PASSWORD=123456 mysql
+** filter
 
 
+config/sys.config:/srv/filter/releases/0.1.0/sys.config
+config/vm.args:/srv/filter/releases/0.1.0/vm.args
+log:/srv/filter/log
+
+
+docker rm filter_dev || true
+docker run --name filter_dev -p 8083:8083 -itd 	-v	 `pwd`/config/:/srv/config   -v  `pwd`/log:/srv/filter/log 	 172.16.1.5:5000/library/filter:dev
+
+
+* 连上正在运行的容器
+
+docker exec -it 5de2471aa6e9 /bin/bash
+
+* docker网络模型
+
+绝世好文 https://github.com/denverdino/aliyungo/wiki/Zookeeper-cluster-with-Docker
+
+bridge模式: Docker缺省的网络模式是bridge方式。Brdige桥接模式为每个Docker Container创建独立的网络栈，保证容器内的进程组使用独立的网络环境，实现容器间、容器与宿主机之间的网络栈隔离。另外，Docker通过宿主机上的网桥(docker0)来连通容器内部的网络栈与宿主机的网络栈，实现容器与宿主机乃至外界的网络通信。 
+Host网络模式: 如果启动容器的时候使用host模式，那么这个容器将不会获得一个独立的Network Namespace，而是和宿主机共用一个Network Namespace。容器将不会虚拟出自己的网卡，配置自己的IP等，而是使用使用宿主机的IP和端口，不用任何NAT转换，就如直接跑在宿主机中的进程一样。但是，容器的其他方面，如文件系统、进程列表等还是和宿主机隔离的。
+
+--net=host 
+
+http://lsword.github.io/2014/06/06.html
+* docker优雅的退出
+
+http://tonybai.com/2014/10/09/gracefully-shutdown-app-running-in-docker/
+docker stop的行为
+
+可以看出当我们执行docker stop时，docker会首先向容器内的当前主程序发送一个SIGTERM信号，用于容器内程序的退出。如果容器在收到SIGTERM后没有马上退出， 那么stop命令会在等待一段时间（默认是10s）后，再向容器发送SIGKILL信号，将容器杀死，变为退出状态。
+
+* docker搜索
+docker search 139.198.2.55:5000/
+
+* docker增加私有仓库并重启
+
+[root@localhost ~]# vim /etc/sysconfig/docker
+修改此行
+OPTIONS='--selinux-enabled --insecure-registry 139.198.2.65:5000'
+[root@localhost ~]# service docker restart
 
