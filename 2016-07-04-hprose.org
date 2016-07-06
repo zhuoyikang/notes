@@ -1,0 +1,30 @@
+hprose学习
+
+官网 http://www.hprose.com/
+
+* hprose，restful和rpc之间如何做出选择?
+
+如果要在 restful 和传统 RPC 之间选择用哪个来做微服务的话，那么显然应该选择 restful，虽然 restful 用起来很麻烦，但是传统的 RPC 存在一些问题不适合做微服务（比如紧耦合，跨语言的问题）。而如果要在 restful 和 hprose 之间选择的话，那么 hprose 是更好的方式，因为它既解决了传统 RPC 存在的不适合做微服务的问题，又比 restful 简单好用。
+
+* hprose是否考虑中间文件，有中间文件的话，我可以发布这个中间文件，让各种语言的使用者自己去生成sdk就方便了
+
+中间文件这种恰恰是不适合用来做微服务的，因为就是它导致了服务器和客户端的紧耦合
+
+* hprose是否能做api级别的权限验证
+
+至于权限验证这个，hprose 里面提供了服务器端事件，过滤器，中间件等功能可以实现对服务方法无入侵的权限验证和控制
+hprose 的客户端不需要生成，hprose提供的客户端自身就可以跨语言调用。
+
+* hprose有没有打算加入dubbo的服务治理的功能，还是想保持现在简洁纯粹的调用框架、
+
+hprose 的服务注册与发现我开了个新项目：https://github.com/hprose/hprose-registry
+
+* hprose是否可以直接发布成http/json的接口？这样需要简单json接口的也可以很方便的提供。
+
+通过filter实现rpc-json接口.
+
+https://github.com/hprose/hprose-js/wiki/Hprose-%E8%BF%87%E6%BB%A4%E5%99%A8#%E5%8D%8F%E8%AE%AE%E8%BD%AC%E6%8D%A2
+
+
+返回结果string.json文本就行
+
