@@ -257,7 +257,6 @@ docker run -ti -v /data ubuntu /bin/bash
 
 docker run -ti ubuntu /bin/bash
 
-
 docker run -ti ubuntu /bin/bash -v /data
 
 ** nginx :https://hub.tenxcloud.com/repos/docker_library/nginx
@@ -293,7 +292,9 @@ docker run --name zyk-zoo  -ti -p 2181:2181 -d  -v `pwd`/conf:/opt/zookeeper/con
 docker run --net=host  -d -ti  -v `pwd`/conf:/opt/zookeeper/conf -v `pwd`/data:/tmp/zookeeper jplock/zookeeper
 
 ** mysql
+
 docker  run --name zyk-mysql -d -p 3306:3306 -e MYSQL_ROOT_PASSWORD=123456 mysql
+
 ** filter
 
 
@@ -304,7 +305,6 @@ log:/srv/filter/log
 
 docker rm filter_dev || true
 docker run --name filter_dev -p 8083:8083 -itd 	-v	 `pwd`/config/:/srv/config   -v  `pwd`/log:/srv/filter/log 	 172.16.1.5:5000/library/filter:dev
-
 
 * 连上正在运行的容器
 
@@ -337,3 +337,6 @@ docker search 139.198.2.55:5000/
 OPTIONS='--selinux-enabled --insecure-registry 139.198.2.65:5000'
 [root@localhost ~]# service docker restart
 
+* cent os 安装docker
+
+sudo chkconfig docker on

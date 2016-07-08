@@ -1,0 +1,81 @@
+* lisp
+** 宏学习
+*** 宏的强大1:自定义语法
+
+https://www.zhihu.com/question/19869614
+
+一般我们认为
+程序 <==>　表达式＋数据
+而表达式一般是编程语言提供的基本语法，我们在具体业务上通过函数(或者其他的定义符)定义我们自己的逻辑来处理数据。其他语言的函数包括lisp的函数同样可以做到这点，但就像骑自行车从帝都到魔都，跟开传送在帝都与魔都间位移一样。两个方式都能在理论上达到目的，在事实的操作难易程度却存在很大差距。
+在lisp中由于特殊的语法，表达式与数据的转换是如此浑然天成。
+例：python在1.5版本后加入列表解析。
+
+#+begin_src python
+divisibleByTwo= [x for x in range(10) if x % 2 == 0]
+
+#这在1.5版本之前是不能使用的。但是我们通过其他方式可以达到目的。
+
+divisibleByTwo = []
+for x in range(10):
+   if x%2 == 0:
+      divisibleByTwo.append(x)
+#+end_src
+
+在lisp中可以这样做，我们定义一个叫做lcomp的宏。我们期望能达到这种效果
+
+#+begin_src lisp
+[x for x in range(10) if x % 2 == 0] ==> (lcomp x for x in (range 10) if (= (% x 2) 0))
+#+end_src
+
+代码如下：
+
+#+begin_src lisp
+(defmacro lcomp (expression for var in list conditional conditional-test)
+  ;; create a unique variable name for the result
+  (let ((result (gensym)))
+    ;; the arguments are really code so we can substitute them 
+    ;; store nil in the unique variable name generated above
+    `(let ((,result nil))
+       ;; var is a variable name
+       ;; list is the list literal we are suppose to iterate over
+       (loop for ,var in ,list
+            ;; conditional is if or unless
+            ;; conditioanl-test is (= (mod x 2) 0) in our examples
+            ,conditional ,conditional-test
+            ;; and this is the action from the earlier lisp example
+            ;; result = result + [x] in python
+            do (setq ,result (append ,result (list ,expression))))
+           ;; return the result 
+       ,result)))
+#+end_src
+
+在lisp解释器中就可以使用 (lcomp x for x in (range 10) if (= (mod x 2) 0))
+
+同样在lisp中也可以实现在python2.5中新加入的with语句。
+而不必等语言的实现者发布新版本后才可以使用。etc
+
+
+
+*** 为什么是宏而不是函数(有那些是宏能做而函数不能做的):
+
+宏的参数在传递时不进行求值，而是以字面形式传递给宏的参数。宏的参数一旦传递完毕，就进行展开。展开宏的过程将一直进行到这段代码中的所有宏都展开完毕为止。宏完全展开完毕后，就和当初直接手写在此处的代码没有区别，也就是嵌入了这段代码上下文中，然后Lisp系统就对完整的代码上下文进行求值。
+
+
+*** 宏能控制宏调用中参数的求值,并且它可以展开进入到主调方的上下文中.
+
+这也大大提高了门槛，因为修改代码需要你对程序的足够认识与扎实的功底。
+对于其他语言，逻辑的不清尚且可以写出代码做测试，写了十几或几十行代码一步步弄懂逻辑，然后把前面的推倒。在lisp中几行代码就可以实现其他语言几何级的代码量，所以修改难度也是几何级的增长。
+lisp写一些小脚本，别为难自己了，但是lisp对于大型项目，它可以做到你定义自己的语法，最终迭代成最适合你这个特定需求独特的语言。
+
+对与lisp禅语:
+hi,lisp帮我把箱子打开吧，lisp: WTFK
+我需要拯救世界，lisp: 给我把魔杖
+
+对代码不保证编译通过。以上内容仅基于个人理解，请以专业内容为准。
+
+*** 参考阅读
+
+What makes lisp macros so special;https://link.zhihu.com/?target=http%3A//stackoverflow.com/questions/267862/what-makes-lisp-macros-so-special
+Lisp Macro:https://link.zhihu.com/?target=http%3A//c2.com/cgi/wiki%3FLispMacro
+https://zh.wikipedia.org/zh-cn/Common_Lisp
+https://zh.wikipedia.org/wiki/%E6%83%B0%E6%80%A7%E6%B1%82%E5%80%BC

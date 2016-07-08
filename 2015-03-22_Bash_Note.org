@@ -1,0 +1,263 @@
+#+SETUPFILE: ../css/level-1.orgcss
+#+TITLE: Bash:学习笔记
+
+* if语句
+
+#+begin_src sh
+  ROOT_UID=0
+  # $UID 为系统变量，当前的用户id，root的UID为0.
+  if [ "$UID" -ne "$ROOT_UID" ]
+  then
+      echo "not root"
+  else
+      echo "yes root"
+  fi
+#+end_src
+
+* case 语句
+
+#+begin_src sh
+  for v in `ls`; do
+      case $v in
+          ,*product_logs.txt ) echo $v;;
+          ,*vir_money_logs.txt ) echo $v;
+      esac
+  done
+#+end_src
+
+* 前缀去重
+
+#+begin_src sh
+  for v in `ls`; do echo ${v:0:15} ; done | uniq
+#+end_src
+
+* 字典
+
+#+begin_src sh
+  array=(
+      'hello::world.'
+      'nice::to meet you'
+  )
+
+  for index in "${array[@]}" ; do
+      KEY="${index%%::*}"
+      VALUE="${index##*::}"
+      echo "$KEY - $VALUE"
+  done
+#+end_src
+
+* 循环
+
+#+begin_src sh
+for v in `ls`
+do
+      cd $v
+      git remote -v
+      cd  ..
+done
+#+end_src
+
+* 多进程
+  http://blog.csdn.net/wzy_1988/article/details/8811153
+
+* 获取命令行参数
+
+#+begin_src sh
+query=$1
+function test()
+{
+    echo $query
+
+    if [[ $query =~ ^(.+:.+)$ ]]
+    then
+        name=`echo "$query" | awk -F":" '{print $1}'`
+        query=`echo "$query" | awk -F":" '{print $2}'`
+    fi
+}
+
+echo $name
+echo $query
+echo nicef
+
+#+end_src
+
+#+RESULTS:
+|       |
+|       |
+| nicef |
+* 检查文件是否存在
+
+http://www.cnblogs.com/emanlee/p/3583769.html
+
+#如果文件夹不存在，创建文件夹
+if [ ! -d "/myfolder" ]; then
+  mkdir /myfolder
+fi
+
+#shell判断文件,目录是否存在或者具有权限
+
+
+folder="/var/www/"
+file="/var/www/log"
+
+# -x 参数判断 $folder 是否存在并且是否具有可执行权限
+if [ ! -x "$folder"]; then
+  mkdir "$folder"
+fi
+
+# -d 参数判断 $folder 是否存在
+if [ ! -d "$folder"]; then
+  mkdir "$folder"
+fi
+
+# -f 参数判断 $file 是否存在
+if [ ! -f "$file" ]; then
+  touch "$file"
+fi
+
+# -n 判断一个变量是否有值
+if [ ! -n "$var" ]; then
+  echo "$var is empty"
+  exit 0
+fi
+
+# 判断两个变量是否相等
+if [ "$var1" = "$var2" ]; then
+  echo '$var1 eq $var2'
+else
+  echo '$var1 not eq $var2'
+fi
+
+
+二元比较操作符,比较变量或者比较数字.
+注意数字与字符串的区别.
+1.整数比较 
+[cpp] view plaincopy
+-eq 等于,如:if [ "$a" -eq "$b" ]   
+-ne 不等于,如:if [ "$a" -ne "$b" ]   
+-gt 大于,如:if [ "$a" -gt "$b" ]   
+-ge 大于等于,如:if [ "$a" -ge "$b" ]   
+-lt 小于,如:if [ "$a" -lt "$b" ]   
+-le 小于等于,如:if [ "$a" -le "$b" ]   
+<   小于(需要双括号),如:(("$a" < "$b"))   
+<=  小于等于(需要双括号),如:(("$a" <= "$b"))   
+>   大于(需要双括号),如:(("$a" > "$b"))   
+>=  大于等于(需要双括号),如:(("$a" >= "$b"))   
+
+小数据比较可使用AWK 
+
+2.字符串比较
+
+[cpp] view plaincopy
+= 等于,如:if [ "$a" = "$b" ]   
+== 等于,如:if [ "$a" == "$b" ],与=等价   
+
+* Initdemo
+
+#+begin_src shell
+#!/bin/bash
+#
+#       /etc/rc.d/init.d/atd
+#
+# Starts the at daemon
+#
+# chkconfig: 345 95 5
+# description: Runs commands scheduled by the at command at the time \
+#    specified when at was run, and runs batch commands when the load \
+#    average is low enough.
+# processname: atd
+
+# Source function library.
+. /etc/init.d/functions
+
+test -x /usr/sbin/atd || exit 0
+
+RETVAL=0
+
+#
+#       See how we were called.
+#
+
+prog="atd"
+
+start() {
+        # Check if atd is already running
+        if [ ! -f /var/lock/subsys/atd ]; then
+            echo -n $"Starting $prog: "
+            daemon /usr/sbin/atd
+            RETVAL=$?
+            [ $RETVAL -eq 0 ] && touch /var/lock/subsys/atd
+            echo
+        fi
+        return $RETVAL
+}
+
+stop() {
+        echo -n $"Stopping $prog: "
+        killproc /usr/sbin/atd
+        RETVAL=$?
+        [ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/atd
+        echo
+        return $RETVAL
+}
+
+
+restart() {
+        stop
+        start
+}
+
+reload() {
+        restart
+}
+
+status_at() {
+        status /usr/sbin/atd
+}
+
+case "$1" in
+start)
+        start
+        ;;
+stop)
+        stop
+        ;;
+reload|restart)
+        restart
+        ;;
+condrestart)
+        if [ -f /var/lock/subsys/atd ]; then
+            restart
+        fi
+        ;;
+status)
+        status_at
+        ;;
+*)
+        echo $"Usage: $0 {start|stop|restart|condrestart|status}"
+        exit 1
+esac
+
+exit $?
+exit $RETVAL
+#+end_src
+* Bash中的字符串截取
+1. 按子串分割截取
+ 
+${varible#*string}               从左往右，删除最短的一个以string结尾的子串，即截取第一个string子串之后的字符串
+${varible##*string}             从左往右，删除最长的一个以string结尾的子串，即截取最后一个string子串之后的字符串
+${varible%string*}              从右往左，删除最短的一个以string开头的子串，即截取最后一个string子串之前的字符串
+${varible%%string*}          从右往左，删除最长的一个以string开头的子串，即截取第一个string子串之前的字符串
+
+. 固定位置截取
+
+${varible:start:len}:截取变量varible从位置start开始长度为len的子串。第一个字符的位置为0。
+
+例如：
+
+export TEST=123abc456abc789
+echo ${TEST#*abc}          ===>删掉123abc剩下456abc789
+echo ${TEST##*abc}       ===>删掉123abc456abc剩下"789
+echo ${TEST%abc*}        ===>删掉abc789剩下123abc456
+echo ${TEST%%abc*}    ===>删掉abc456abc789剩下123
+* Bash 函数

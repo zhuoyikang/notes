@@ -1,60 +1,23 @@
 * golang reflect
 
+** TypeOf
 
-#+begin_src go :imports "fmt"
-fmt.Println("Hello, 世界")
-#+end_src
+TypeOf函数的定义如下，参数为接口类型，返回值为类型
 
-#+RESULTS:
-: Hello, 世界
-
-
+func TypeOf(i interface {}) Type
 
 #+begin_src go
   import (
-    "fmt"
+  "fmt"
     "reflect"
   )
 
   func main() {
-    var x int = 1
-    fmt.Println("type2: ", reflect.TypeOf(x))
+  var x int = 1
+  fmt.Println("type3: ", reflect.TypeOf(x))
   }
 #+end_src
 
 #+RESULTS:
-: type2:  int
-
-#+begin_src ruby
-print "good"
-#+end_src
-
-#+RESULTS:
-: nil
-
-#+begin_src sh
-echo "nice"
-#+end_src
-
-#+RESULTS:
-: nice
-
-
-
-#+begin_src C++ :includes <stdio.h>
-  int a=1;
-  int b=1;
-  printf("%d\n", a+b);
-#+end_src
-
-#+RESULTS:
-: 2
-
-
-#+begin_src C
-printf ("Hello World!\n");
-#+end_src
-
-#+RESULTS:
-: Hello World!
+: type3:  int
 
