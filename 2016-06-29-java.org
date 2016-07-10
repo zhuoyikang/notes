@@ -44,7 +44,6 @@ java -cp target/my-app-1.0-SNAPSHOT.jar com.mycompany.app.App
 [[http://drizzlewalk.blog.51cto.com/2203401/416508][maven打可执行的jar包以及classpath设置]]
 
 * Maven: 打包可运行的jar包(java application)及依赖项处理
-
 ** mvn exec:exec运行方法
 IDE环境中，可以直接用exec-maven-plugin插件来运行java application，类似下面这样：
 
@@ -117,8 +116,6 @@ ok了，部署时把jar包和lib目录，都上传到服务器上 ，然后测�
 #+begin_src sh
 java -jar  xxx.jar
 #+end_src
-
-
 
 * sdkman 
 http://sdkman.io/

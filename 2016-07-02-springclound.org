@@ -46,46 +46,23 @@ Distributed sessions
 
 DOCKER_HOST=unix:///var/run/docker.sock mvn clean install
 * spring boot
-
 ** 介绍
 
 Spring Boot是Spring团队推出的新框架，它所使用的核心技术还是Spring框架，主要是Spring 4.x，所以如果熟悉spring 4的人，能够更快的接受和学会这个框架。Spring boot可以看做是在spring框架基础上再包了一层，这一层包含方便开发者进行配置管理和快速开发的模块，以及提供了一些开箱即用的工具，比如监控等。
 
-** Quick Start
+** Spring Boot Reference Guide
+
++ [[http://docs.spring.io/spring-boot/docs/current-SNAPSHOT/reference/htmlsingle/#getting-started][英文]]
++ [[https://github.com/qibaoguang/Spring-Boot-Reference-Guide][中文]]
+
+** Quick Start：使用spring boot创建一个应用
 
 [[http://projects.spring.io/spring-boot/][参考文章]] 官网
 
-配置
+1. 先通过maven新建一个项目
+
+2. 修改配置
 #+begin_src xml
-
-
-  <build>
-    <plugins>    
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>exec-maven-plugin</artifactId>
-        <version>1.2.1</version>
-        <executions>
-          <execution>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <executable>java</executable>
-          <arguments>
-            <argument>-classpath</argument>
-            <classpath>
-            </classpath>
-            <argument>com.mycompany.app.SampleController</argument>
-          </arguments>
-        </configuration>
-      </plugin>
-    </plugins>
-  </build>
-
-
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
@@ -116,7 +93,7 @@ public class SampleController {
     @RequestMapping("/")
     @ResponseBody
     String home() {
-        return "Hello World!";
+    return "Hello World!";
     }
 
     public static void main(String[] args) throws Exception {
@@ -127,16 +104,67 @@ public class SampleController {
 
 运行
 
-java -cp my-app-1.0-SNAPSHOT.jar com.mycompany.app.SampleController
+#+begin_src sh
+# 运行失败，需要增加两个插件.
+java -cp target/my-app-1.0-SNAPSHOT.jar com.mycompany.app.SampleController
 
-java -cp ~/.m2/repository/org/springframework/boot/spring-boot/1.3.6.RELEASE/spring-boot-1.3.6.RELEASE.jar:target/my-app-1.0-SNAPSHOT.jar \
-com.mycompany.app.SampleController
-
+# 详细过程参见：
+# 2016-06-29-java.org/Maven: 打包可运行的jar包(java application)及依赖项处理
+#+end_src
 
 [[http://start.spring.io/][项目生成器]]
-** Spring Boot Reference Guide
 
-+ [[http://docs.spring.io/spring-boot/docs/current-SNAPSHOT/reference/htmlsingle/#getting-started][英文]]
-+ [[https://github.com/qibaoguang/Spring-Boot-Reference-Guide][中文]]
+
+3. 运行
+
+此时在浏览器输入http://localhost:8080/，你会看到helloworld字样，这是一个web应用，使用了嵌入式的tomcat。
+在pom配置中我们仅仅使用了spring-boot-starter-web依赖，spring boot会根据此依赖下载相关jar包并初始化基本的运行环境，比如说绑定端口8080等。
+spring boot封装所有配置信息为键值类型，你想改变默认配置，只需要向应用传入这个键值对就可以，比如我们想改变绑定端口为8081，那么你在main方法里传入“—server.port=8081”即可，或者干脆使用：
+
+#+begin_src java
+
+// 详细过程参见：
+// 2016-06-29-java.org/Maven: 打包可运行的jar包(java application)及依赖项处理
+// 将依赖库拷贝到lib
+mvn dependency:copy-dependencies -DoutputDirectory=target/lib
+
+// 运行
+java -cp target/lib/  -jar target/my-app-1.0-SNAPSHOT.jar
+
+
+// 或者
+SpringApplication.run(SampleController.class, "--server.port=8081");
+#+end_src
+
+其他插件
+Spring boot提供的一些开箱即用的应用非常容易使用，比如监控，你只需要在pom文件中引入：
+
+#+begin_src xml
+  <dependency>
+   <groupId>org.springframework.boot</groupId>
+   <artifactId>spring-boot-starter-actuator</artifactId>
+  </dependency>
+#+end_src
+
+
+引入之后，spring boot是默认开启监控的，运行应用你可以在浏览器中输入：
+
+http://localhost:8080/health
+
+就可以看到默认的监控信息了：
+
+#+begin_src js
+{"status":"UP","diskSpace":{"status":"UP","total":161067397120,"free":91618398208,"threshold":10485760}}
+#+end_src
+
+
+信息包括程序执行状态以及基本的磁盘信息。
+项目例子：https://github.com/indie21/springboot-demo
+
 * 7天学会spring cloud
+
+http://www.cnblogs.com/skyblog/p/5127712.html
+
+** DONE spring cloud教程之使用spring boot创建一个应用
+　
 
