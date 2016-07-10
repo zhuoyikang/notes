@@ -1,0 +1,144 @@
+#+SETUPFILE: ../css/level-1.orgcss
+#+TITLE: Mac:笔记
+* 如何安装gdb
+
+http://ntraft.com/installing-gdb-on-os-x-mavericks/
+
+
+#+begin_src sh
+$ brew tap homebrew/dupes
+$ brew install gdb
+#+end_src
+
+* 禁止timemachine本地备份
+
+打开：应用程序-实用工具-终端
+输入如下命令：
+sudo tmutil disablelocal
+
+提示的时候请输入管理员密码
+
+重新开启的方法，还是在终端输入：
+sudo tmutil enablelocal
+
+* mac 修改文件描述符个数
+
+MacOSX下缺省能同时打开的文件描述符最大数是256个，使用 ulimit -a命令查看 
+$ ulimit -a 
+core file size          (blocks, -c) 0 
+data seg size           (kbytes, -d) 6144 
+file size               (blocks, -f) unlimited 
+max locked memory       (kbytes, -l) unlimited 
+max memory size         (kbytes, -m) unlimited 
+open files                      (-n) 256 
+pipe size            (512 bytes, -p) 1 
+stack size              (kbytes, -s) 8192 
+cpu time               (seconds, -t) unlimited 
+max user processes              (-u) 266 
+virtual memory          (kbytes, -v) unlimited 
+
+查看内核每进程最大文件数： 
+$ sysctl kern.maxfiles kern.maxfilesperproc 
+kern.maxfiles: 12288 
+kern.maxfilesperproc: 10240 
+
+增大每进程最大文件数： 
+$ sudo sysctl -w kern.maxfilesperproc=20480 kern.maxfiles=22528 
+
+然后设置 
+$ ulimit -n 20480 
+注意ulimit只在每个shell窗口生命周期内有效，当新开一个shell后，得再次设置 
+sysctl做的修改没有这个问题 
+
+* mac 下pdf或者markdown转换
+
+接转换，命令如下：
+pandoc -f markdown -t docx ./test.md -o test.docx
+
+如果使用GitHub风格markdown语法，可用下面命令转换：
+pandoc -f markdown_github -t docx ./test.md -o test.docx
+
+作者：竹叶青
+链接：https://www.zhihu.com/question/22972843/answer/44199459
+来源：知乎
+著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。
+* mac os 禁止apache httpd自动启动
+
+sudo launchctl unload -w /System/Library/LaunchDaemons/org.apache.httpd.plist
+如果没有任何输出就是成功卸载了。如果要加载，把unload换成load即可。
+
+如果要查看launchctl用法，可以在shell终端输入launchctl，然后输入help回车。quit退出。
+* Mac Os下开机启动apache、nginx
+** Apache 启动配置
+
+建立一个配置文件
+
+adylab:~ adyliu$ cat /System/Library/LaunchDaemons/org.apache.httpd.plist
+#+begin_src xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>org.apache.httpd</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/sbin/apachectl</string>
+        <string>-k</string>
+        <string>start</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+</dict>
+</plist>
+#+end_src
+
+load启动配置
+
+adylab:~ adyliu$ sudo launchctl load -w /System/Library/LaunchDaemons/org.apache.httpd.plist
+在mac os 10.8上需要加上-w参数，否则无法启动
+
+下次开机就可以自动启动了，这里先手动启动。
+
+手动启动
+
+#+begin_src sh
+adylab:~ adyliu$ sudo launchctl start org.apache.httpd
+查看启动
+
+adylab:~ adyliu$ sudo launchctl list|grep httpd
+12769   -   0x7fec05840410.anonymous.httpd
+12768   -   0x7fec03ca9e70.anonymous.httpd
+-   0   org.apache.httpd
+卸载启动配置
+
+adylab:~ adyliu$ sudo launchctl unload /System/Library/LaunchDaemons/org.apache.httpd.plist
+如果不再使用了，卸载配置即可。
+#+end_src
+
+
+
+** nginx启动配置
+
+nginx操作类似，不再重复，建立配置文件如下：
+
+adylab:LaunchDaemons adyliu$ cat org.nginx.nginx.plist
+
+#+begin_src xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>org.nginx.nginx</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/nginx</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+</dict>
+</plist>
+
+#+end_src
+

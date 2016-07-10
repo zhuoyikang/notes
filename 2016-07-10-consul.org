@@ -1,0 +1,24 @@
+[[https://www.consul.io/intro/getting-started/agent.html][consule.io]]
+
+* 运行consule
+
+#+begin_src sh
+# 安装
+brew cask install consul
+
+# 启动
+consul agent -dev
+
+# 查看consul集群中的节点
+consul members
+
+# 带配置的启动
+consul agent -dev -config-dir /etc/consul.d
+consul agent -dev -config-dir consul.d
+
+# 通过dns查询
+dig @127.0.0.1 -p 8600 web.service.consul SRV
+
+# 通过api查询
+curl http://localhost:8500/v1/catalog/service/web
+#+end_src

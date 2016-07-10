@@ -1,0 +1,3 @@
+http://www.infoq.com/cn/articles/weibo-cacheservice-architecture/
+【链接】流式大数据处理的三种框架：Storm，Spark和Sa
+http://www.csdn.net/article/2015-03-09/2824135

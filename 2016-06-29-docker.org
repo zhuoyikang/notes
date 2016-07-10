@@ -264,6 +264,9 @@ docker run -ti ubuntu /bin/bash -v /data
 静态网页
 docker run --name sphinx-nginx -v /Users/zhuoyikang/source/sphinx_demo/output:/usr/share/nginx/html:ro -d  -p 8070:80 nginx
 
+docker run --name sphinx-nginx -v /jh/source/doc:/usr/share/nginx/html:ro -d  -p 8070:80 nginx
+
+
 ** php:5.5-apache
 
 https://github.com/docker-library/php/blob/e37ca400ba0e1c34357bf06732bc77064e5a4941/5.5/apache/Dockerfile
@@ -305,6 +308,17 @@ log:/srv/filter/log
 
 docker rm filter_dev || true
 docker run --name filter_dev -p 8083:8083 -itd 	-v	 `pwd`/config/:/srv/config   -v  `pwd`/log:/srv/filter/log 	 172.16.1.5:5000/library/filter:dev
+
+** name
+
+docker run --name name_dev -p 8011:8011 -itd 	-v	 `pwd`/config/:/srv/config   -v  `pwd`/log:/srv/filter/log 	 172.16.1.5:5000/library/name
+
+** sphinx
+
+docker run -v /jh/source/doc:/doc docker.io/minimum2scp/sphinx "cd /doc; make html"
+docker run -v /Users/zhuoyikang/source/services/doc:/doc  minimum2scp/sphinx "cd /doc; make html"
+
+
 
 * 连上正在运行的容器
 

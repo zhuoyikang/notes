@@ -27,15 +27,25 @@ http://pan.baidu.com/s/1pJ6wrBt
 
 #+begin_src sh
 mvn archetype:generate -DgroupId=com.mycompany.helloworld -DartifactId=helloworld -Dpackage=com.mycompany.helloworld -Dversion=1.0-SNAPSHOT
-mvn archetype:generate -DgroupId=com.mycompany.app -DartifactId=my-app -DarchetypeArtifactId=maven-archetype-quickstart -DinteractiveMode=false
-
 cd helloworld
-
 mvn package 
-
 java -cp target/helloworld-1.0-SNAPSHOT.jar com.mycompany.helloworld.App
+
+
+mvn archetype:generate -DgroupId=com.mycompany.app -DartifactId=my-app -DarchetypeArtifactId=maven-archetype-quickstart -DinteractiveMode=false
+mvn package 
+java -cp target/my-app-1.0-SNAPSHOT.jar com.mycompany.app.App
 #+end_src
 
 + archetype:generate 目标会列出一系列的 archetype 让你选择。 
 + Archetype 可以理解成项目的模型。 Maven 为我们提供了很多种的项目模型，包括从简单的 Swing 到复杂的 Web 应用。我们选择默认的 maven-archetype-quickstart ，是编号 #106 ，如下图所示：
 
+* sdkman 
+http://sdkman.io/
+
+Groovy enVironment Manager, it was inspired by the very useful RVM and rbenv tools, used at large by the Ruby community.
+
+curl -s "https://get.sdkman.io" | bash
+
+
+source "/Users/zhuoyikang/.sdkman/bin/sdkman-init.sh"

@@ -16,3 +16,6 @@ html_theme = 'nature'
 
 [[http://www.sphinx-doc.org/en/stable/theming.html][主题列表]]
 
+
+
+sphinx-build -b html src  output

@@ -1,0 +1,10 @@
+* 介绍
+
+Kafka是由LinkedIn开发的一个分布式的消息系统，使用Scala编写，它以可水平扩展和高吞吐率而被广泛使用。目前越来越多的开源分布式处理系统如Cloudera、Apache Storm、Spark都支持与Kafka集成。InfoQ一直在紧密关注Kafka的应用以及发展，“Kafka剖析”专栏将会从架构设计、实现、应用场景、性能等方面深度解析Kafka。
+
+
+* 参考连接
+
+[[http://www.infoq.com/cn/articles/kafka-analysis-part-1][Kafka剖析（一）：Kafka背景及架构介绍]]
+[[http://shiyanjun.cn/archives/1497.html][Flume日志收集分层架构应用实践]]
+[[http://tech.meituan.com/mt-log-system-arch.html][基于Flume的美团日志收集系统(一)架构和设计]]

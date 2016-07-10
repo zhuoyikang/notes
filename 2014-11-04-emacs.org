@@ -103,6 +103,7 @@ http://dsec.pku.edu.cn/~rli/WiKi/EmacsRegexp.html
 放大字体: Ctrl-x Ctrl-+ 或 Ctrl-x Ctrl-=
 缩小字体: Ctrl-x Ctrl–
 重置字体: Ctrl-x Ctrl-0
+
 * mysql
 ** 通过下面的命令设置两个连接mysql的常用帐号
 

@@ -1,5 +1,11 @@
 * 微服务开发的12项要素
 
++ Configuration Service
++ Discovery Service
++ Circuit breakers
++ Distributed sessions
+
+
 spring cloud官方文档提到的服务开发的12项要素。
 
 I. Codebase
@@ -29,11 +35,13 @@ XII. Admin processes
 
 * 使用Spring Cloud和Docker构建微服务
 
-用例子来说明，非常方便入门 http://www.dockone.io/article/510
+用例子来说明，非常方便入门 http://www.kennybastani.com/2015/07/spring-cloud-docker-microservices.html
 
 Configuration Service
 Discovery Service
 Circuit breakers
 Distributed sessions
 
+** 问题： Connect to localhost:2375 [localhost ]
 
+DOCKER_HOST=unix:///var/run/docker.sock mvn clean install

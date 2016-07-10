@@ -1,5 +1,4 @@
 * golang reflect
-
 ** TypeOf
 
 TypeOf函数的定义如下，参数为接口类型，返回值为类型
@@ -8,16 +7,111 @@ func TypeOf(i interface {}) Type
 
 #+begin_src go
   import (
-  "fmt"
+    "fmt"
     "reflect"
   )
 
+  type A struct {
+    name string
+  }
+
+  func (a *A) test1() string {
+    return "aa"
+  }
+
+
+  func (a *A) test2() string {
+    return "aa"
+  }
+
+
   func main() {
-  var x int = 1
-  fmt.Println("type3: ", reflect.TypeOf(x))
+    var x int = 1
+    fmt.Println("type3: ", reflect.TypeOf(x))
+
+
+    a := new(A)
+    a_value := reflect.ValueOf(a)
+    t := a_value.Type()
+    fmt.Println("type3: ", reflect.TypeOf(a), " ", t.NumMethod())
   }
 #+end_src
 
 #+RESULTS:
 : type3:  int
+: type3:  *main.A   2
 
+** map
+
+
+#+begin_src go
+  import (
+    "fmt"
+  )
+
+  func main() {
+    userData := make(map[string]interface{})
+    userData["good"] = 123
+    userData["nice"] = 2
+
+    if data, ok := userData["good"]; ok {
+      fmt.Println("nice:", data.(int))
+    }
+
+
+    fmt.Println("good: ", userData);
+  }
+#+end_src
+
+#+RESULTS:
+: nice: 123
+: good:  map[good:123 nice:2]
+
+
+* wtfac:hprose
+** DONE 1_1_compatible.go
+CLOSED: [2016-07-09 Sat 20:39]
+** DONE LICENSE.md
+CLOSED: [2016-07-09 Sat 20:39]
+** TODO README.md
+** TODO README_zh_CN.md
+** TODO bench
+** DONE class_manager.go
+CLOSED: [2016-07-09 Sat 23:03]
+** TODO client.go
+** DONE context.go
+CLOSED: [2016-07-09 Sat 20:40]
+** DONE doc.go
+CLOSED: [2016-07-09 Sat 23:00]
+** TODO examples
+** DONE filter.go
+CLOSED: [2016-07-09 Sat 23:00]
+** DONE formatter.go
+CLOSED: [2016-07-09 Sat 22:19]
+** TODO hprose
+** TODO http_client.go
+** TODO http_service.go
+** TODO io
+** TODO jsonrpc_client_filter.go
+** TODO jsonrpc_service_filter.go
+** DONE raw_reader.go
+CLOSED: [2016-07-10 Sun 08:33]
+** TODO reader.go
+** DONE result_mode.go
+CLOSED: [2016-07-09 Sat 20:49]
+** DONE service.go
+CLOSED: [2016-07-10 Sun 08:37]
+** TODO stream_client.go
+** TODO stream_common.go
+** TODO stream_service.go
+** DONE tags.go
+CLOSED: [2016-07-09 Sat 23:01]
+** TODO tcp_client.go
+** TODO tcp_service.go
+** TODO test
+** TODO unix_client.go
+** TODO unix_service.go
+** TODO uuid.go
+** TODO websocket_client.go
+** TODO websocket_service.go
+** TODO writer.go
