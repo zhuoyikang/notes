@@ -45,3 +45,98 @@ Distributed sessions
 ** 问题： Connect to localhost:2375 [localhost ]
 
 DOCKER_HOST=unix:///var/run/docker.sock mvn clean install
+* spring boot
+
+** 介绍
+
+Spring Boot是Spring团队推出的新框架，它所使用的核心技术还是Spring框架，主要是Spring 4.x，所以如果熟悉spring 4的人，能够更快的接受和学会这个框架。Spring boot可以看做是在spring框架基础上再包了一层，这一层包含方便开发者进行配置管理和快速开发的模块，以及提供了一些开箱即用的工具，比如监控等。
+
+** Quick Start
+
+[[http://projects.spring.io/spring-boot/][参考文章]] 官网
+
+配置
+#+begin_src xml
+
+
+  <build>
+    <plugins>    
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>1.2.1</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <executable>java</executable>
+          <arguments>
+            <argument>-classpath</argument>
+            <classpath>
+            </classpath>
+            <argument>com.mycompany.app.SampleController</argument>
+          </arguments>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>1.3.6.RELEASE</version>
+  </parent>
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+  </dependencies>
+#+end_src
+
+hello/SampleController.java
+
+#+begin_src java
+package hello;
+
+import org.springframework.boot.*;
+import org.springframework.boot.autoconfigure.*;
+import org.springframework.stereotype.*;
+import org.springframework.web.bind.annotation.*;
+
+@Controller
+@EnableAutoConfiguration
+public class SampleController {
+
+    @RequestMapping("/")
+    @ResponseBody
+    String home() {
+        return "Hello World!";
+    }
+
+    public static void main(String[] args) throws Exception {
+        SpringApplication.run(SampleController.class, args);
+    }
+}
+#+end_src
+
+运行
+
+java -cp my-app-1.0-SNAPSHOT.jar com.mycompany.app.SampleController
+
+java -cp ~/.m2/repository/org/springframework/boot/spring-boot/1.3.6.RELEASE/spring-boot-1.3.6.RELEASE.jar:target/my-app-1.0-SNAPSHOT.jar \
+com.mycompany.app.SampleController
+
+
+[[http://start.spring.io/][项目生成器]]
+** Spring Boot Reference Guide
+
++ [[http://docs.spring.io/spring-boot/docs/current-SNAPSHOT/reference/htmlsingle/#getting-started][英文]]
++ [[https://github.com/qibaoguang/Spring-Boot-Reference-Guide][中文]]
+* 7天学会spring cloud
+

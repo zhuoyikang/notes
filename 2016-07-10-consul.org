@@ -22,3 +22,9 @@ dig @127.0.0.1 -p 8600 web.service.consul SRV
 # 通过api查询
 curl http://localhost:8500/v1/catalog/service/web
 #+end_src
+
+demo 
+
+https://github.com/hashicorp/consul/tree/master/demo/vagrant-cluster
+
+

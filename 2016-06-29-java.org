@@ -14,7 +14,7 @@
 javac HelloWorld.java
 java HelloWorld
 
-* Maven
+* Maven QuickStart
 
 + [[http://www.oracle.com/technetwork/cn/community/java/apache-maven-getting-started-1-406235-zhs.html][Apache Maven 入门篇 ( 上 )]]
 + [[http://www.oracle.com/technetwork/cn/community/java/apache-maven-getting-started-2-405568-zhs.html][Apache Maven 入门篇 ( 下 )]]
@@ -39,6 +39,86 @@ java -cp target/my-app-1.0-SNAPSHOT.jar com.mycompany.app.App
 
 + archetype:generate 目标会列出一系列的 archetype 让你选择。 
 + Archetype 可以理解成项目的模型。 Maven 为我们提供了很多种的项目模型，包括从简单的 Swing 到复杂的 Web 应用。我们选择默认的 maven-archetype-quickstart ，是编号 #106 ，如下图所示：
+
+
+[[http://drizzlewalk.blog.51cto.com/2203401/416508][maven打可执行的jar包以及classpath设置]]
+
+* Maven: 打包可运行的jar包(java application)及依赖项处理
+
+** mvn exec:exec运行方法
+IDE环境中，可以直接用exec-maven-plugin插件来运行java application，类似下面这样：
+
+#+begin_src xml
+    <groupId>org.codehaus.mojo</groupId>
+    <artifactId>exec-maven-plugin</artifactId>
+    <version>1.2.1</version>
+    <executions>
+        <execution>
+            <goals>
+                <goal>exec</goal>
+            </goals>
+        </execution>
+    </executions>
+    <configuration>
+        <executable>java</executable>
+        <arguments>
+            <argument>-classpath</argument>
+            <classpath>
+            </classpath>
+            <argument>ctas.importer.reader.app.Program</argument>
+        </arguments>
+    </configuration>
+</plugin>
+#+end_src
+
+加了此插件可以直接通过 **mvn exec:exec** 来运行
+
+18行，改成自己的Main-Class类，然后用mvn exec:exec来运行，但是部署到生产环境中时，服务器上通常并不具备maven环境，只能用 java -jar xxx.jar这种方式来运行，下面是一些处理细节：
+
+#+begin_src sh
+mvn exec:exec
+#+end_src
+
+** java -jar xxx.jar运行方法
+
+一、依赖项的处理
+
+java application运行时需要查找依赖的第三方jar，如果查找classpath失败，就会报错，可以先用
+
+#+begin_src sh
+mvn dependency:copy-dependencies -DoutputDirectory=target/lib
+#+end_src
+
+命令，把依赖的jar包全部导出到target/lib这个目录下
+
+加入插件
+
+#+begin_src xml
+<plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-jar-plugin</artifactId>
+    <configuration>
+        <archive>
+            <manifest>
+                <mainClass>ctas.importer.reader.app.Program</mainClass>
+                <addClasspath>true</addClasspath>
+                <classpathPrefix>lib/</classpathPrefix>
+            </manifest>
+        </archive>
+        <classesDirectory>
+        </classesDirectory>
+    </configuration>
+</plugin>
+#+end_src
+
+第7行指定Main-Class，第9行指定classpath的相对路径，这样mvn package后，清单文件里就会自动添加Main-Class和Class-Path这二项
+ok了，部署时把jar包和lib目录，都上传到服务器上 ，然后测试一下，顺利的话 java -jar  xxx.jar就可以了，如果要在后台运行，前面加 nohup
+
+#+begin_src sh
+java -jar  xxx.jar
+#+end_src
+
+
 
 * sdkman 
 http://sdkman.io/
