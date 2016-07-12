@@ -1,4 +1,4 @@
-* 微服务开发的12项要素
+* DONE 微服务开发的12项要素
 
 + Configuration Service
 + Discovery Service
@@ -33,8 +33,7 @@ XI. Logs
 XII. Admin processes
 管理任务作为一次性的过程运行（使用脚本管理服务启动和停止）。
 
-* 使用Spring Cloud和Docker构建微服务
-
+* DONE 使用Spring Cloud和Docker构建微服务
 用例子来说明，非常方便入门 http://www.kennybastani.com/2015/07/spring-cloud-docker-microservices.html
 
 Configuration Service
@@ -45,7 +44,8 @@ Distributed sessions
 ** 问题： Connect to localhost:2375 [localhost ]
 
 DOCKER_HOST=unix:///var/run/docker.sock mvn clean install
-* spring boot
+
+* DONE spring boot入门
 ** 介绍
 
 Spring Boot是Spring团队推出的新框架，它所使用的核心技术还是Spring框架，主要是Spring 4.x，所以如果熟悉spring 4的人，能够更快的接受和学会这个框架。Spring boot可以看做是在spring框架基础上再包了一层，这一层包含方便开发者进行配置管理和快速开发的模块，以及提供了一些开箱即用的工具，比如监控等。
@@ -161,10 +161,23 @@ http://localhost:8080/health
 信息包括程序执行状态以及基本的磁盘信息。
 项目例子：https://github.com/indie21/springboot-demo
 
-* 7天学会spring cloud
-
+* TODO Eureka
+fwe
+* DONE Consul
+CLOSED: [2016-07-11 Mon 21:27]
+* DONE Zookeeper
+CLOSED: [2016-07-11 Mon 21:27]
+* TODO 7天学会spring cloud
 http://www.cnblogs.com/skyblog/p/5127712.html
-
 ** DONE spring cloud教程之使用spring boot创建一个应用
+http://www.cnblogs.com/skyblog/p/5127712.html
+** TODO Spring cloud实现服务注册及发现
+http://www.cnblogs.com/skyblog/p/5133752.html
+** TODO 使用spring cloud实现分布式配置管理
+http://www.cnblogs.com/skyblog/p/5129603.html
+** TODO 综合使用spring cloud技术实现微服务应用
+http://www.cnblogs.com/skyblog/p/5133796.html
+** TODO 使用docker发布spring cloud应用
+http://www.cnblogs.com/skyblog/p/5163691.html
 　
 

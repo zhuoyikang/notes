@@ -1,0 +1,503 @@
+* 连接
+
+[[http://wiki.jabbercn.org/%E9%A6%96%E9%A1%B5][Jabber/XMPP中文翻译计划]]
+
+* 消息:message
+
+XMPP 的<message/>节是使用基本的”push”方法来从一个地方到另一个地方得到消息。 因为消息通常是不告知的,它们是一种”fire-and-forget”的机制来从一个地方到另一个地方快 速获取信息。消息被用于 IM、groupchat、alerts 和 notifications,以及其他应用。
+消息节有五种不同的类型,通过 type 属性来进行区分:
+
++ normal:类型为 normal 的消息和电子邮件消息最相似,因为它们是单个的消息,对应的回应可能会或也可能不会很快到来。
++ chat:类型为 chat 的消息在两个实体间的实时对话中交换,例如两个朋友之间的即时通讯聊天。
++ groupchat: 类型为 groupchat 的消息在多用户聊天室中交换,和互联网中的中继聊天类似(我们将 在第七章中讨论群聊消息)。
++ headline: 类型为 headline 的消息用于发送警示和通告,并不期望有回应(收到 headline 的客户端 不应该让用户回复)。
++ error: 如果对于先前发送邮件发生错误,实体检测这个问题将返回一个类型为 error 的消息。
+  
+** 私聊消息
+
+#+begin_src xml
+
+<message 
+      to="ejabberd2@localhost/2822439916144906745650" 
+      from="ejabberd1@localhost/zhuoyikangdeMacBook-Pro" 
+      id="purple643fdba3" 
+      type="chat">
+    <body>fewfwefwef</body>
+  </message>
+
+#+end_src
+
+** 聊天状态通告:XEP-0085
+
+聊天状态通告[XEP-0085] [[http://xmpp.org/extensions/xep-0085.html][英文]]  [[http://wiki.jabbercn.org/XEP-0085][中文]]
+
+聊天状态 述了你所参与的对话,可以是以下状态之一:
++ starting: 某人开始一个对话,但是你还没有参与进来。
++ active: 你正参与在对话中。当前你没有组织你的消息,而是在关注。
++ composing: 你正在组织一个消息。
++ paused: 你开始组织一个消息,但由于某个原因而停止组织消息。
++ inactive: 你一段时间里没有参与这个对话。
++ gone: 你参与的这个对话已经结束(例如,你关闭了聊天窗口)。
+
+在对话期间,聊天状态最可能进行如下变化:
+在 composing 状态组织完一个消息后,状 态变为 active,等待消息的回复。
+但是,从一个具体状态变化到另一个并不是总是有意义。 例如,如果你不暂停一小段时间,在你撰写消息期间,你不能长时间地地变成 inactive。图 4-2 展示了聊天状态之间的可以变化
+
+
+通过在消息节中嵌入相关的聊天状态元素来进行对话中的状态改变。例如,母亲-女儿
+的对话的开始如下所示:
+
+#+begin_src xml
+<message from="suke@skh.whu.edu.cn" to="daughter@skh.whu.edu.cn"
+type="chat"> <body>Hi honey!</body>
+<active xmlns="http://jabber.org/protocol/chatstates"/> </message>
+#+end_src
+
+通过添加<active/>元素到你的消息中,指示了你在对话中处于活跃状态。你的女儿开始 进行回复,这样她的客户端发送给你一个聊天状态更新,通过添加一个<composing/>元素到 一个空的消息里:
+
+#+begin_src xml
+<message from="daughter@skh.whu.edu.cn" to="suke@skh.whu.edu.cn"
+type="chat">
+<composing xmlns="http://jabber.org/protocol/chatstates"/>
+</message>
+#+end_src
+
+通告之后不久,实际的消息到达,再次使她成为对话中的活跃参与者:
+ 
+#+begin_src xml
+<message from="daughter@skh.whu.edu.cn" to="suke@skh.whu.edu.cn"
+type="chat"> <body>Hi</body>
+<active xmlns="http://jabber.org/protocol/chatstates"/> </message>
+#+end_src
+
+这个对话持续一会儿,直到你问她关于奶奶的事:
+
+#+begin_src xml
+<message from="suke@skh.whu.edu.cn" to="daughter@skh.whu.edu.cn"
+type="chat">
+<body>Did you visit grandma this afternoon? What did she tell you?</body>
+<active xmlns="http://jabber.org/protocol/chatstates"/>
+</message>
+
+<message from="daughter@skh.whu.edu.cn" to="suke@skh.whu.edu.cn"
+type="chat">
+<composing xmlns="http://jabber.org/protocol/chatstates"/>
+</message> 
+#+end_src
+
+
+这里她突然停下码字去接电话,几秒钟后,她的客户端给你发送一个<paused/>的通告:
+
+#+begin_src xml
+<message from="daughter@skh.whu.edu.cn" to="suke@skh.whu.edu.cn"
+type="chat">
+<paused xmlns="http://jabber.org/protocol/chatstates"/>
+</message>
+#+end_src
+
+一会儿后,她又恢复回答:
+
+#+begin_src xml
+<message from="daughter@skh.whu.edu.cn" to="suke@skh.whu.edu.cn"
+type="chat">
+<composing xmlns="http://jabber.org/protocol/chatstates"/>
+</message>
+#+end_src
+
+最后,跳到对话的结尾,她发送再见并关闭了聊天窗口:
+
+#+begin_src xml
+<message from="daughter@skh.whu.edu.cn" to="suke@skh.whu.edu.cn"
+type="chat">
+<body>Everything was fine. I have to go do my homework now.</body> <active xmlns="http://jabber.org/protocol/chatstates"/>
+</message>
+<message from="daughter@skh.whu.edu.cn" to="suke@skh.whu.edu.cn"
+type="chat">
+<gone xmlns="http://jabber.org/protocol/chatstates"/>
+</message>
+#+end_src
+
+你正在交流的这个人对接收到你的聊天状态不是总感兴趣。例如,当他正在使用移动电 话进行 IM 时,她宁愿以不能得知你的状态为代价,来节省有限的网络带宽使用。为了探究 是否其他人对你的聊天状态感兴趣,你像平常一样,通过向消息里面添加<active/>元素开启 一个对话。如果返回的回复没有任何聊天状态信息,你不得不假定其他人要么不知道如何处 理聊天状态更新,要么是不想要接收到他们。从那时起,你继续你的对话,没有添加任何状 态信息到你接下来的消息中。(自然地,如果你知道其他人不支持聊天状态协议,你就完整 地去掉通告。我们在第五章中谈论发现支持各种协议扩展的方式。)
+
+另一个你不想发送聊天状态通告的原因是隐私。你不想要别人知道你在什么时候正在使 用 IM 客户端(聊天状态通告隐藏的信息)。但是,它也不会总是让所有的通告类型都失效。 你可以配置你的客户端,使它只能发送基本的聊天状态信息(例如,你是是否是 active 或 composing),并且不发送关于更多状态的更多信息,例如 paused、inactive 或 gone。这些基 本信息只会显露你是否正在组织回答,并且留下一迹象表明你是否已经离开你的 IM 客户端 或重新考虑谈话并关闭对话。
+
+** 格式化消息
+
+XMPP 让你能够自定义消息的外观或表达,使用
+定义在 XHTML-IM[XEP-0071]中的一个 HTML 子集: 
+
+#+begin_src xml
+<message from="suke@skh.whu.edu.cn"
+to="beta@skh.whu.edu.cn"
+type="chat">
+<body>I love this movie I saw last night, it's awesome!</body> <html xmlns="http://jabber.org/protocol/xhtml-im">
+<body xmlns="http://www.w3.org/1999/xhtml"> <p>
+I <em>love</em>, this new movie I saw last night,
+it's <strong>awesome</strong>! </p>
+</body> </html>
+</message>
+#+end_src
+
+** vcard
+
+
+不用担心,XMPP 覆盖了这方面的内容。我们感兴趣的扩展被称为 vCard-temp[XEP-0054], 能让你发布一个电子商务的卡片,叫做 vCard,而且能得到其他人已经发布的 vCards。
+vCard 标准(最初是出版在 vCard MIME Directory Profile[RFC 2426]中)定义了许多你想 要标榜的数据字段,包括你的名字、昵称、地址、电话和传真号、所属公司、电子邮件地址、 生日、个人网址、你的头像、甚至还有你的 PGP 密钥。你可以不用发布任何你不想发布的 信息,但是这样做能让人们找出更多关于你的信息,这样可以加快对话。
+
+我们假定在 skh.whu.edu.cn 的 suke 发送一个不请自来的消息给 beta: 
+
+#+begin_src xml
+<message from="suke@skh.whu.edu.cn"
+to="beta@skh.whu.edu.cn">
+<body>O Beta do you know the way out of this pool?</body>
+</message>
+#+end_src
+
+
+在回复之前,beta 也许会通过发送一个 IQ-get 到 JabberID 检查 suke 的 vCard:
+
+#+begin_src xml
+<iq from="ejabberd1@localhost" id="pw91nf84"
+to="ejabberd2@localhost"
+type="get">
+<vCard xmlns="vcard-temp"/>
+</iq>
+#+end_src
+
+由于这个请求是发送到 suke 的 bare JID,suke 的服务器代表她进行回复:
+
+#+begin_src xml
+<iq from="suke@skh.whu.edu.cn" id="pw91nf84"
+to="beta@skh.whu.edu.cn"
+type="result">
+<vCard xmlns="vcard-temp">
+<N> <GIVEN>suke</GIVEN>
+</N> <URL>http://sku.whu.edu.cn/~suke/</URL> <PHOTO>
+<EXTVAL>http://www.cs.whu.edu/~rgs/suke03a.gif</EXTVAL> </PHOTO>
+</vCard> </iq>
+#+end_src
+
+因此,beta 至少可以在进行聊天之前,浏览 suke 的个人网址并查看她的图片。自然地, 在 vCard 中的所有数据可能是假的,所以可能会为得到的 vCard 结果付出代价。但是,在许 多情况下,有总比没有好!
+
+更新你的 vCard
+#+begin_src xml
+<iq from="suke@skh.whu.edu.cn" id="w0s1nd97"
+to="skh.whu.edu.cn"
+type="set">
+<vCard xmlns="vcard-temp">
+<N> <GIVEN>suke</GIVEN>
+</N> <URL>http://skh.whu.edu.cn/~suke/</URL> <PHOTO>
+<EXTVAL>http://www.cs.whu.edu/~rgs/suke03a.gif</EXTVAL> </PHOTO> <EMAIL><USERID>suke@whu.edu.cn</USERID></EMAIL>
+</vCard> </iq>
+#+end_src
+
+
+** 阻止和过滤通讯
+
+许多人使用基于 XMPP 的 IM 服务,但是你不想要和他们所有人聊天。事实上,你可能 会想阻止某个人跟你聊天——如你之前的上司、儿时死敌或者上周在聊天室中你遇到的一个 奇怪的家伙。
+
+因为 XMPP 开发者关心隐私,他们已经定义了一个通讯阻止的扩展(定义在 Privacy Lists[XEP-0016]) ,和隐私列表的一个精简界面(定义在 Simple Communication Blocking[XEP-0191]中)。
+
+阻止 gmz@skh.whu.edu.cn
+
+#+begin_src xml
+<iq from="suke@skh.whu.edu.cn/Psi" id="yu4er81v"
+to="suke@skh.whu.edu.cn"
+type="set">
+<block xmlns="urn:XMPP:blocking">
+<item jid="gmz@skh.whu.edu.cn"/> </block>
+</iq>
+#+end_src
+
+获取阻止列表
+
+#+begin_src xml
+  <!-- 获取 -->
+  <iq from="suke@skh.whu.edu.cn/Psi" id="92h1nv8f"
+      to="suke@skh.whu.edu.cn"
+      type="get">
+    <blocklist xmlns="urn:XMPP:blocking"/>
+  </iq>
+
+  <!-- 回复 -->
+  <iq from="suke@skh.whu.edu.cn" id="92h1nv8f"
+      to="suke@skh.whu.edu.cn/Psi"
+      type="result">
+    <blocklist xmlns="urn:XMPP:blocking">
+      <item jid="gmz@skh.whu.edu.cn"/>
+    <item jid="spammers.lit"/> </blocklist>
+  </iq>
+
+#+end_src
+
+* 出席:presence
+
+只有通过你授权的人才能看到你是否在线。这个授权被称为出席订阅 (presence subscription)。为了让某人看到你的出席，这个人需要向你发送订阅请求,并且 你需要批准该请求。一旦你批准了这个订阅,用户将自动地接收到关于你的网络可用性的常规通知。订阅模型意味着 XMPP 的<presence/>节本质上是一个简单、专门的发布-订阅方法, 通过这种形式,当你在线,然后将状态改为“会议中”或者“午餐中”,然后离线,向你订阅了出席的人将收到更新的出席信息。
+
+** 出席订阅
+
+让我们看一下握手订阅过程实际上是怎样运作的。 为了获取某个人的出席信息,你给他发送一个订阅请求(通过 subscribe 类型): 
+
+#+begin_src xml
+<presence from="suke@skh.whu.edu.cn" to="beta@skh.whu.edu.cn" type="subscribe"/> 
+#+end_src
+
+
+当指定的接受者接受到你的出席订阅请求时,他可以接受它(通过 subscribed 类型)或
+者拒绝它(通过 unsubscribed 类型):
+#+begin_src xml
+<presence from="beta@skh.whu.edu.cn" to=" suke@skh.whu.edu.cn" type="subscribed"/> 
+#+end_src
+
+
+你可以想象到,为了创造一个双向的出席订阅,当一个人接受了对方发送的订阅请求之后,也需要返回一个订阅请求给对方。
+#+begin_src xml
+<presence from="beta@skh.whu.edu.cn" to=" suke@skh.whu.edu.cn" type="subscribe"/>
+#+end_src
+
+
+一般来说,你的客户端这时会自动同意请求,而不是要求你同意对方返回的请求。
+#+begin_src xml
+<presence from="suke@skh.whu.edu.cn" to="beta@skh.whu.edu.cn" type="subscribed"/>
+#+end_src
+
+
+一旦你订阅了另一个人的出席信息,当他的网络可用状况改变的时候,你会自动得到通 知。通知信息的格式如下:
+#+begin_src xml
+<presence from="beta@skh.whu.edu.cn" to=" suke@skh.whu.edu.cn">
+<show>xa</show>
+<status>down the rabbit hole!</status> </presence>
+#+end_src
+
+** 出席消息传递
+现在你和你的联络者互相被订阅了,那么出席信息是怎样在你们之间传递的呢?这里有
+一个简单的概括。
+
+1. 你和你的服务器商议 XML 流信息(见第 12 章)
+ 
+2. 你发送一个初始化的出席节到你的服务器:
+
+#+begin_src xml
+<presence/>
+#+end_src
+
+是的,这是你可以看见的最小的 XMPP 小节。初始化出席可以包含更多的可用状态信 息,关于这一点后面会详述。
+
+3. 你的服务器检查你的名册,然后发送一个出席通知到订阅你的每一个人,发送的格式如 下:
+
+#+begin_src xml
+<presence from="suke@skh.whu.edu.cn" to="beta@skh.whu.edu.cn"/>
+<presence from="suke@skh.whu.edu.cn" to="gmz@skh.whu.edu.cn"/>
+[etc.]
+#+end_src
+
+
+4. 现在每一个订阅了你的出席的人知道你现在在线,并且可以进行通讯。但是你怎么知道 他们是否在线呢? 这里,你的服务器再一次发挥了作用,因为它发送一个出席调查给你订阅的每一个人:
+
+#+begin_src xml
+<presence from="suke@skh.whu.edu.cn" to="beta@skh.whu.edu.cn" type="probe"/>
+<presence from="suke@skh.whu.edu.cn" to="gmz@skh.whu.edu.cn" type="probe"/>
+[etc.]
+#+end_src
+
+5. 一旦你的联络者的服务器接受到了调查,它们根据记录检测许可,如果你被允许查看联 络者的出席信息,你将至少会受到来自那些在线的人的一次通知,有时不在线的话也会 给一个通知,包括上一次出席通知的发送时间。
+
+#+begin_src xml
+<presence from="gmz@skh.whu.edu.cn" to="suke@skh.whu.edu.cn" type="unavailable"> <delay xmlns="urn:XMPP:delay"
+stamp="2008-11-26T15:59:09Z"/> 1 </presence>
+<presence from="lj@skh.whu.edu.cn" to="suke@skh.whu.edu.cn"/>
+<presence from="skh@skh.whu.edu.cn" to="suke@skh.whu.edu.cn"/>
+[etc.]
+#+end_src
+
+<delay/> 元素是由联络者的服务器添加的,而 UTC 时间戳是出席节被联络者发送的 时间。(在这个例子中,是联络者下线的时间)
+注意你可能接收到一片以上的出席片,因为任何给定的联系可能包含多个链接的资源。
+你总是接收到不可用的出席信息吗?
+有些服务器实现并不针对出席调查返回不可用通知,它们只是简单地忽略掉出席调查。 从理论上说,如果被调查的实体不返回任何出席通知,就可以假设实体并不在线。
+
+** 出席状态更新
+
+#+begin_src xml
+
+<!-- 发送一条presence消息 -->
+  <presence from="ejabberd1@localhost/zhuoyikangdeMacBook-Pro" > 
+    <show>xa</show>
+    <status>down the rabbit hole!</status>
+  </presence>
+
+<!-- 收到一条presence消息 -->
+  <presence to="ejabberd2@localhost/11889489359729853235658" 
+            from="ejabberd1@localhost/zhuoyikangdeMacBook-Pro">
+    <show>away</show>
+    <status>离开</status>
+    <c xmlns="http://jabber.org/protocol/caps" node="http://pidgin.im/" ver="DdnydQG7RGhP9E3k9Sf+b+bF0zo=" hash="sha-1" />
+    <x xmlns="vcard-temp:x:update">
+      <photo>3a78a838440a436f03750a232ac7769bb30e1f98</photo>
+    </x>
+  </presence>
+
+#+end_src
+
+** TODO 定向出席
+** 下线
+#+begin_src xml
+<presence type="unavailable"/>
+#+end_src
+
+下线有这样几种含义:
+
++ 你的服务器向你的联络列表中的所有人广播你不可用的通知。
++ 你的服务器同样向所有你发送了定向出席的实体广播你的不可用状态的通知。
++ 如果你没有其他的在线资源,当你的联系人的服务器接收到一个不可用通知时,它们应该会停止向你发送出席通知。 如果你没有其他的在线资源,你的服务器将停止发送信息给你,将它们储存起来,下次你上线时,将这些信息传递给你。(我们在第四章中更详细地 述了这些离线消息)。
+
+** TODO 丰富出席
+
+* 信息/查询:iq 
+
+信息/查询(IQ)节 供了一种用于请求-应答交互和简单工作流的结构,和你熟悉的 HTTP 中的 GET、POST 和 PUT 方法相似。和<message/>节不同,一个 IQ 节能包含仅有一个有效载 荷,用于定义处理的请求或接收人采用的行为。另外,发送 IQ 节的实体必须总是接收一个 回复(通常由目的接收者或接受者的服务器产生)。请求和应答通过使用 id 属性跟踪,id 属 性由请求实体生成,并被包含在应答的实体中。最后,type 属性在 IQ 节中有特定的值:
+
++ get: 请求实体信息,例如请求注册一个账户(类似于 HTTP GET)。
++ set: 请求实体 供一些信息或作出一个请求(类似于 HTTP POST 或 PUT)。 
++ result: 应答实体返回 get 操作的结果(例如一个实体必须 供信息用来注册账户),或者确认 一个 set 请求(类似于一个 HTTP200 状态码)。
++ error: 应答实体或一个中间实体,例如 XMPP 服务器,通知请求实体它不能处理 get 或 set 请 求(例如,因为请求的格式不正确,请求实体无权执行该操作等)。早期在 HTTP 中使用的 数字错误代码已被可扩展错误条件的 XML 元素取代。
+
+** 花名册/获取: roster
+
+*** 例子1，通过sleekxmpp发送
+
+#+begin_src xml
+  <!-- 获取花名册 -->
+
+  <iq type="get"
+      id="5595091f-0bf2-45f1-b7be-4dfc575eaa9a-3">
+    <query xmlns="jabber:iq:roster" />
+  </iq>
+
+  <!-- 回复花名册 -->
+  <iq to="ejabberd2@localhost/17899982120809451657666" 
+      from="ejabberd2@localhost"
+      id="5595091f-0bf2-45f1-b7be-4dfc575eaa9a-3"
+      type="result">
+    <query xmlns="jabber:iq:roster">
+      <item jid="ejabberd1@localhost" subscription="both" />
+      <item jid="ejabberd2@localhost" subscription="none" />
+    </query>
+  </iq>
+
+#+end_src
+
+*** 例子2，通过adium发送
+
+#+begin_src xml
+  <!-- 另一个例子:from Adium -->
+  <iq type='get'
+      id='5595091f-0bf2-45f1-b7be-4dfc575eaa9a-3'>
+    <query xmlns='jabber:iq:roster'/>
+  </iq>
+
+  <iq xmlns='jabber:client'
+      from='ejabberd1@localhost'
+      to='ejabberd1@localhost/zhuoyikangdeMacBook-Pro'
+      id='5595091f-0bf2-45f1-b7be-4dfc575eaa9a-3'
+      type='result'>
+    <query xmlns='jabber:iq:roster'>
+      <item subscription='to' jid='ejabberd3@localhost'>
+        <group>Buddies</group>
+      </item>
+      <item subscription='both' jid='ejabberd2@localhost'>
+        <group>联系人列表</group>
+        <group>Buddies</group>
+      </item>
+    </query>
+  </iq>
+#+end_src
+
+** 花名册/添加
+
+#+begin_src xml
+
+  <!-- 订阅presence -->
+  <presence to='ejabberd@localhost' type='subscribe'/>
+
+
+  <!-- 添加一个新的联系人 -->
+  <iq xmlns='jabber:client' from='ejabberd1@localhost' to='ejabberd1@localhost/zhuoyikangdeMacBook-Pro' id='push18026560777104592747' type='set'>
+    <query xmlns='jabber:iq:roster'>
+      <item subscription='none' jid='ejabberd@localhost'>
+        <group>Buddies</group>
+      </item>
+    </query>
+  </iq>
+
+  <!-- 返回一个空的result确定名单更新 -->
+
+  <iq xmlns='jabber:client' from='ejabberd1@localhost' to='ejabberd1@localhost/zhuoyikangdeMacBook-Pro' id='purplebf9a1ae3' type='result'/>
+
+
+  <!-- 其他 -->
+  <iq xmlns='jabber:client' from='ejabberd1@localhost' to='ejabberd1@localhost/zhuoyikangdeMacBook-Pro' id='push17735263317994402973' type='set'>
+    <query xmlns='jabber:iq:roster'>
+      <item ask='subscribe' subscription='none' jid='ejabberd@localhost'>
+        <group>Buddies</group>
+      </item>
+    </query>
+  </iq>
+
+  <iq type='result' id='push17735263317994402973'/>
+
+  <iq type='get' id='purplebf9a1ae4'>
+    <ping xmlns='urn:xmpp:ping'/>
+  </iq>
+
+  <iq xmlns='jabber:client' from='ejabberd1@localhost' to='ejabberd1@localhost/zhuoyikangdeMacBook-Pro' id='purplebf9a1ae4' type='result'/>
+
+#+end_src
+* TODO 发现世界
+* TODO 数据表单
+* 多方通讯互动
+多用户聊天(MUC) [XEP- 0045]
+
+** 群聊基础
+
+群聊的重点是一个有自己的 JabberID 的特定的房间。例如,在图 7-1 所示的房间的 ID 是 teaparty@conference.skh.whu.edu.cn。
+
+房间是在 teaparty@conference. skh.whu.edu.cn 托管,而不是 skh.whu.edu.cn。这地址是 原先的 jabberd 服务器一部分,其中唯一由核心 XMPP 后台程序处理的服务是出席,名册, 一对一的消息,和一般节路由。其他服务由叫做组件的附加模块处理。这些组件被分配不同 的域名,如在 jabber.org 的群聊服务 conference.jabber.org。这些域名随后用于内部布线,使 任何目标为 conference.jabber.org 的节被自动传送到群聊组件。更多现代 XMPP 服务器项目 遵循同样的做法,虽然 XMPP 没有什么能防止一个如 teaparty@skh.whu.edu.cn 地址成为群 聊室。
+
+Suke 这样加入我们的 teaparty 房间:
+
+#+begin_src xml
+<presence from="suke@ skh.whu.edu.cn /rabbithole" to="teaparty@conference. skh.whu.edu.cn /suke"/>
+#+end_src
+
+ 在你加入一个房间的时候,几件事情发生:
+
+ + 房间里发出了一个参与通知,从你的 JID 到其他参与者。
+ + 房间会从所有其他参与者的房间 JID 发送给你的出席,让你的客户可以建立一个专门的房间居住者“名册“。
+ + 房间通常会通知你最近的一些交流消息使你掌握谈论的背景。
+
+首先,房间的参与者收到了 Suke 的加入通知:
+
+#+begin_src xml
+<presence from="teaparty@conference.skh.whu.edu.cn/suke" to="hatter@skh.whu.edu.cn/underahat"/>
+<presence from="teaparty@conference.skh.whu.edu.cn/Suke" to="hare@skh.whu.edu.cn/chair"/>
+<presence from="teaparty@conference.skh.whu.edu.cn/Suke" to="dormouse@skh.whu.edu.cn/sleepspace"/>
+#+end_src
+
+接下来,Suke 接受到房间参与者的名单
+
+#+begin_src xml
+<presence from="teaparty@conference.skh.whu.edu.cn/Mad Hatter" to="suke@skh.whu.edu.cn/rabbithole"/>
+<presence from="teaparty@conference.skh.whu.edu.cn/March Hare" to="suke@skh.whu.edu.cn/rabbithole"/>
+<presence from="teaparty@conference.skh.whu.edu.cn/Dormouse" to="suke@skh.whu.edu.cn/rabbithole"/>
+#+end_src
+
+然后是房间历史。房间发送多少信息取决于配置。注意这些消息包括一个延迟发送时间 戳显示(UTC),它说明每个消息最初收到的时间,这样你可以知道历史信息多久以前被送 往(因此可以知道房间的繁忙程度):
+
+#+begin_src xml
+<message from="teaparty@conference.skh.whu.edu.cn/March Hare" 
+to="suke@skh.whu.edu.cn/rabbithole"
+type="groupchat">
+<body>Have some wine</body>
+<delay xmlns="urn:XMPP:delay" stamp="2008-11-07T18:42:03Z"/>
+</message>
+#+end_src

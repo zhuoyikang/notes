@@ -1,5 +1,10 @@
 [[https://www.consul.io/intro/getting-started/agent.html][consule.io]]
 
+* console教程
+
+直接看getting-started做完即可。
+https://www.consul.io/intro/getting-started/install.html
+
 * 运行consule
 
 #+begin_src sh

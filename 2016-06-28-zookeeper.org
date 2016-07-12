@@ -131,7 +131,6 @@ ZooKeeper使用ACL控制对节点的访问。ACL的实现同Unix文件访问权�
 客户端连接到ZooKeeper，验证自身的时候，ZooKeeper将所有对应客户端的ID都关联到客户端连接上。客户端试图存取节点的时候，ZooKeeper会在节点的ACL中校验这些ID。ACL由(scheme:expression,perms)对组成。expression的格式是特定于scheme的。比如说，(ip:19.22.0.0/16,READ)给予任何IP地址以19.22开头的客户端以READ权限。
 
 * 编程
-
 ** zk驱动: https://github.com/huaban/erlzk
 erlzk is A Pure Erlang ZooKeeper Client (no C dependency).
 

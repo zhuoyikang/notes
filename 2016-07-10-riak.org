@@ -1,0 +1,3 @@
+riak doc
+
+http://riak.com.cn/riak/1.4.2/theory/why-riak/

@@ -68,8 +68,7 @@ yunbaIO   2014-09-04 11:24:47 +08:00
 
 我们也投入了大量时间精力研究实践实时海量数据通讯、统计、存储等问题。之前创始人还在ArchSummit上就这方面做了的分享，题目就是实时系统架构和实践，有兴趣的可以戳http://t.cn/RhUxmwN看视频，全程干货，当时也提到了协议选择的问题。 
 
-
-*  [[https://ruby-china.org/topics/22530][百万级分布式开源物联网MQTT消息服务器]] 
+* [[https://ruby-china.org/topics/22530][百万级分布式开源物联网MQTT消息服务器]] 
 
 基于高并发的Erlang语言和OTP平台设计，支持百万级连接和分布式集群，发布订阅模式的开源MQTT消息服务器
 完整支持MQTT V3.1/V3.1.1协议规范，扩展支持WebSocket、Stomp、CoAP、MQTT-SN或私有TCP协议
@@ -77,3 +76,48 @@ yunbaIO   2014-09-04 11:24:47 +08:00
 emqttd - 开源MQTT消息服务器¶
 
 http://emqtt.com/docs/cluster.html
+* getting started
+
+http://127.0.0.1:5280/oauth/authorization_token?response_type=token&client_id=Client1&redirect_uri=http://127.0.0.1:80&scope=get_roster
+http://client.uri/?access_token=RHIT8DoudzOctdzBhYL9bYvXz28xQ4Oj&token_type=bearer&expires_in=3600&scope=user_get_roster+sasl_auth&state=
+http://localhost:5280/oauth/authorization_token?response_type=token&client_id=myclient&redirect_uri=http://localhost:5280&scope=user_get_roster+sasl_auth&state
+
+http://stackoverflow.com/questions/34757845/how-to-configure-ejabberd-with-oauth-support
+
+http://localhost:5280/?access_token=vYC6Q2o4v0wTuSlbS5YadmAyedD33xJX&token_type=bearer&expires_in=3600&scope=sasl_auth&state=
+
+curl -v -X POST -H "Authorization: Bearer vYC6Q2o4v0wTuSlbS5YadmAyedD33xJX" http://localhost:5280/api/get_roster -d '[]'
+
+
+** 炮筒:get_roster
+
+q-> working
+
+http://localhost:5280/oauth/authorization_token?response_type=token&client_id=Client1&redirect_uri=http://localhost&scope=get_roster+sasl_auth
+http://localhost/?access_token=sQiKlgvrPYuf9bHjcMitDc4aqyljsfft&token_type=bearer&expires_in=3600&scope=get_roster%20sasl_auth&state=
+curl -v -X POST -H "Authorization: Bearer sQiKlgvrPYuf9bHjcMitDc4aqyljsfft" http://localhost:5280/api/get_roster -d '{}'
+
+** connected_users
+
+
+http://localhost:5280/oauth/authorization_token?response_type=token&client_id=Client1&redirect_uri=http://localhost&scope=connected_users+sasl_auth+get_roster+register
+http://localhost/?access_token=QFLVLjNPWWLwaJtZ2462jz3JQM6d7Q1Z&token_type=bearer&expires_in=3600&scope=connected_users%20sasl_auth%20get_roster%20register&state=
+
+
+# 普通身份执行
+curl -v -X POST -H "Authorization: Bearer JaTWkvLqzZZXY8i8L1ih7UvaTgqxH6AS" http://localhost:5280/api/get_roster -d '{}'
+
+# 使用admin身份执行
+curl -v -X POST -H "X-Admin: true" -H "Authorization: Bearer JaTWkvLqzZZXY8i8L1ih7UvaTgqxH6AS" http://localhost:5280/api/change_password -d '{"user": "ejabberd2", "host": "localhost"}'
+curl -v -X POST -H "X-Admin: true" -H "Authorization: Bearer JaTWkvLqzZZXY8i8L1ih7UvaTgqxH6AS" http://localhost:5280/api/get_roster -d '{"user": "ejabberd2", "server": "localhost"}'
+curl -v -X POST -H "X-Admin: true" -H "Authorization: Bearer JaTWkvLqzZZXY8i8L1ih7UvaTgqxH6AS" http://localhost:5280/api/connected_users -d '{}'
+
+curl -v -X POST -H "X-Admin: true" -H "Authorization: Bearer QFLVLjNPWWLwaJtZ2462jz3JQM6d7Q1Z" http://localhost:5280/api/register -d '{ "user": "ejabberd3", "host": "localhost",    "password": "wwww" }'
+
+ POST /api/register
+  {
+    "user": "aaaaa",
+    "host": "bbbbb",
+    "password": "ccccc"
+  }
+
