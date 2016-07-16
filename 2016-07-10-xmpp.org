@@ -2,6 +2,9 @@
 
 [[http://wiki.jabbercn.org/%E9%A6%96%E9%A1%B5][Jabber/XMPP中文翻译计划]]
 
+* TODO XMPP学习
+SCHEDULED: <2016-07-12 Tue>
+
 * 消息:message
 
 XMPP 的<message/>节是使用基本的”push”方法来从一个地方到另一个地方得到消息。 因为消息通常是不告知的,它们是一种”fire-and-forget”的机制来从一个地方到另一个地方快 速获取信息。消息被用于 IM、groupchat、alerts 和 notifications,以及其他应用。
@@ -456,7 +459,6 @@ stamp="2008-11-26T15:59:09Z"/> 1 </presence>
 * TODO 数据表单
 * 多方通讯互动
 多用户聊天(MUC) [XEP- 0045]
-
 ** 群聊基础
 
 群聊的重点是一个有自己的 JabberID 的特定的房间。例如,在图 7-1 所示的房间的 ID 是 teaparty@conference.skh.whu.edu.cn。
@@ -469,7 +471,7 @@ Suke 这样加入我们的 teaparty 房间:
 <presence from="suke@ skh.whu.edu.cn /rabbithole" to="teaparty@conference. skh.whu.edu.cn /suke"/>
 #+end_src
 
- 在你加入一个房间的时候,几件事情发生:
+在你加入一个房间的时候,几件事情发生:
 
  + 房间里发出了一个参与通知,从你的 JID 到其他参与者。
  + 房间会从所有其他参与者的房间 JID 发送给你的出席,让你的客户可以建立一个专门的房间居住者“名册“。
@@ -494,10 +496,216 @@ Suke 这样加入我们的 teaparty 房间:
 然后是房间历史。房间发送多少信息取决于配置。注意这些消息包括一个延迟发送时间 戳显示(UTC),它说明每个消息最初收到的时间,这样你可以知道历史信息多久以前被送 往(因此可以知道房间的繁忙程度):
 
 #+begin_src xml
-<message from="teaparty@conference.skh.whu.edu.cn/March Hare" 
-to="suke@skh.whu.edu.cn/rabbithole"
+    <message from="teaparty@conference.skh.whu.edu.cn/March Hare" 
+             to="suke@skh.whu.edu.cn/rabbithole"
+             type="groupchat">
+      <body>Have some wine</body>
+      <delay xmlns="urn:XMPP:delay" stamp="2008-11-07T18:42:03Z"/>
+    </message>
+
+
+    <message from="teaparty@conference.skh.whu.edu.cn/Mad Hatter" to="suke@skh.whu.edu.cn/rabbithole"
+             type="groupchat">
+      <body>Two days wrong!</body>
+      <delay xmlns="urn:XMPP:delay" stamp="2008-11-07T18:42:17Z"/> 
+    </message>
+
+    <message from="teaparty@conference.skh.whu.edu.cn/Mad Hatter" to="suke@skh.whu.edu.cn/rabbithole"
+             type="groupchat">
+      <body>March Hare: I told you butter wouldn’t suit the works!</body> 
+      <delay xmlns="urn:XMPP:delay" stamp="2008-11-07T18:42:49Z"/>
+    </message>
+#+end_src
+
+你一旦进入房间,就可以通过发送信息给房间本身来参加谈话。因为这些信息是“实时 的”,它们不包含延迟标志:
+
+#+begin_src xml
+
+  <message from="suke@skh.whu.edu.cn/rabbithole"
+           to="teaparty@conference.skh.whu.edu.cn"
+           type="groupchat">
+    <body>March Hare: There’s PLENTY of room!</body>
+  </message>
+#+end_src
+
+房间发送的消息,随后传递到所有的参与者,包括发送消息的一方。
+
+#+begin_src xml
+<message from="teaparty@conference.skh.whu.edu.cn/Suke" to="hatter@skh.whu.edu.cn/underahat"
 type="groupchat">
-<body>Have some wine</body>
-<delay xmlns="urn:XMPP:delay" stamp="2008-11-07T18:42:03Z"/>
+<body>March Hare: There’s PLENTY of room!</body>
+</message>
+<message from="teaparty@conference.skh.whu.edu.cn/Suke" to="dormouse@skh.whu.edu.cn/sleepspace" type="groupchat">
+<body>March Hare: There’s PLENTY of room!</body> </message>
+<message from="teaparty@conference.skh.whu.edu.cn/Suke" to="hare@skh.whu.edu.cn/chair"
+type="groupchat">
+<body>March Hare: There’s PLENTY of room!</body>
+</message>
+<message from="teaparty@conference.skh.whu.edu.cn/Suke" to="suke@skh.whu.edu.cn/rabbithole"
+type="groupchat">
+<body>March Hare: There’s PLENTY of room!</body>
 </message>
 #+end_src
+
+
+要发送悄悄话给 March Hare,Suke 将发出一个聊天类型的消息到 March Hare 的房间的 JID:
+
+#+begin_src xml
+  <message from="suke@skh.whu.edu.cn/rabbithole"
+           to="teaparty@conference.skh.whu.edu.cn/March Hare" type="chat">
+    <body>you silly Hare!</body>
+  </message>
+#+end_src
+
+由于私人邮件被发送到March Hare的房间JID,它是由MUC服务器处理,它把消息从
+Suke 转发到 March Hare。通过重写地址,使该消息似乎来自 Suke 的房间 JID;并重写地址以 便该消息被传递到 March Hare 的真正的 JID:
+
+#+begin_src xml
+<message from="teaparty@conference.skh.whu.edu.cn/Suke" to="hare@skh.whu.edu.cn/chair"
+type="chat"> <body>you silly Hare!</body>
+</message>
+#+end_src
+
+Suke 和 Hare 这样就可以开始一个完整的交谈,如果他们想要的话。(尽管如果他们想 邀请第三人他们的谈话,他们将需要创建另一个 MUC 的房间)。
+如果你想离开房间时,你向你当前房间的 JID 发送一个不可用出席(或你的服务器在你 离线的时候根据你的行为发送):
+
+#+begin_src xml
+<presence from="dormouse@skh.whu.edu.cn/sleepspace" to="teaparty@conference.skh.whu.edu.cn/Dormouse" type="unavailable"/>
+#+end_src
+
+** 人群控制
+完整的多用户聊天技术包含了各种人群控制,包括踢出并 禁止命令,限制谁可以在 MUC 的房间中有交谈的能力,以及如何完全限制访问。
+
+例如,一个有 knave@skh.whu.edu.cn JabberID 和“武士”的绰号的 人在 trial@conference.skh.whu.edu.cn 聊天室作祟,所以 king 更替武士的角色为访客:
+
+#+begin_src xml
+  <iq from="king@skh.whu.edu.cn/throne" id="ks61f36g"
+      to="trial@conference.skh.whu.edu.cn"
+      type="set">
+    <query xmlns="http://jabber.org/protocol/muc#admin">
+    <item nick="The Knave" role="visitor"/> </query>
+  </iq>
+
+  <iq from="trial@conference.skh.whu.edu.cn" id="ks61f36g"
+      to="king@skh.whu.edu.cn/throne"
+      type="result"/>
+#+end_src
+
+MUC 的服务然后在房间里通知(包括受影响的乘客)每个人该冒犯者的身份已更改为 游客,它是通过从冒犯者发送包含新角色符号的更新的出席实现的。
+
+#+begin_src xml
+  <presence from="trial@conference.skh.whu.edu.cn/The Knave"
+            to="knave@skh.whu.edu.cn/mobile"> 
+    <x xmlns="http://jabber.org/protocol/muc#user">
+    <item affiliation="none" role="visitor"/>
+    </x>
+  </presence>
+#+end_src
+
+冒犯者现在已经无法将消息发送到整个房间,如果他试图这样做,房间里将返回“禁止 发言”错误:
+
+#+begin_src xml
+<message from="knave@skh.whu.edu.cn/mobile" to="trial@conference.skh.whu.edu.cn"
+type="groupchat"> <body>boo!</body>
+</message>
+<message from="trial@conference.skh.whu.edu.cn" to="knave@skh.whu.edu.cn/mobile"
+type="error"> <body>boo!</body> <error type="auth">
+<forbidden xmlns="urn:ietf:params:xml:ns:XMPP-stanzas"/> </error>
+</message>
+#+end_src
+
+
+一个较强的人群控制措施,是将冒犯者从房间中踢出。当你将一个人从房间踢出,他就 被临时从房间中删除,但他在这之后可以自由加入(有时这种功能是作为一个笑话,甚至开 玩笑地使用)。
+在 MUC 中,通过将一个人在房间的角色改变为“无”来踢出他。
+
+
+#+begin_src xml
+  <iq from="king@skh.whu.edu.cn/throne"
+      id="u7r61fsv" to="trial@conference.skh.whu.edu.cn" type="set">
+    <query xmlns="http://jabber.org/protocol/muc#admin">
+      <item nick="The Knave" role="none"/>
+  </query> </iq>
+#+end_src
+
+对角色的踢出和其他临时更改是根据用户在房间的昵称,而不是真正的 JID(主要是 因为房间的主持人不一定能看到房间讨论者的实际 JID)。
+
+然后服务通过从他的房间 JID 到房间里每个人发送不可用的出席类型来移除这个人,并 通过具有特殊地位的代码,表明他的离开是不由自主的:
+
+#+begin_src xml
+  <presence from="trial@conference.skh.whu.edu.cn/The Knave"
+            to="knave@skh.whu.edu.cn/mobile"
+            type="unavailable">
+    <x xmlns="http://jabber.org/protocol/muc#user">
+      <item affiliation="none" role="none"/>
+      <status code="307"/>
+    </x>
+  </presence>
+#+end_src
+
+一个 307 状态代码是指该用户已被暂时踢出了房间。状态码的完整列表在多用户聊天 规范中 供。
+
+如前所述,被踢后,冒犯者可以返回到房间,导致更多麻烦。如果出现这种情况,管理 员可以采取更激烈的行动,并通过改变人的从属关系来完全禁止冒犯者的访问:
+
+#+begin_src xml
+  <iq from="king@skh.whu.edu.cn/throne" id="d82csl87"
+      to="trial@conference.skh.whu.edu.cn"
+      type="set">
+    <query xmlns="http://jabber.org/protocol/muc#admin">
+      <item jid="knave@skh.whu.edu.cn" affiliation="outcast"/>
+    </query>
+  </iq>
+#+end_src
+
+禁止访问和改变所属更改建立在真正的 JID 用户的基础上,而不是房间昵称。
+该服务然后通过发送不可用出席类型到房间中的每个人来从房间删除这个人,附加一个 特别代码表明他是被禁止访问的。
+
+#+begin_src xml
+  <presence from="trial@conference.skh.whu.edu.cn/The Knave"
+            to="knave@skh.whu.edu.cn/mobile"
+            type="unavailable">
+    <x xmlns="http://jabber.org/protocol/muc#user">
+      <item jid="knave@skh.whu.edu.cn" affiliation="outcast"/>
+      <status code="301"/>
+    </x>
+  </presence>
+#+end_src
+
+一个 301 状态代码是指该用户已被永久禁止进入房间。状态码的完整列表在多用户聊 天规范中 供。
+踢人和禁止访问使用 MUC 协议的管理功能之一:角色和从属关系。这是对 JabberID 和 JID 在房间里的权限的临时或者永久关联。例如,一个弃儿永久关联,表明用户是不允许加 入房间。
+
+** 角色和从属关系
+
+在 MUC 的规范定义了以下角色及从属关系: 
+
++ 弃儿:不能加入房间的人。
++ 游客:可以加入聊天室,并听取交谈,但不能发言的人。 
++ 参与者:可以同时听和说的人。
++ 成员: 可以听、说和加入房间的人(如果是会员制)。
++ 主持人:可以听、说、踢参与者和游客、以及切换他人发言权限的人。
++ 管理者: 可以听、说、踢和禁止参加者和游客,切换别人说话能力,看到居民的实际 JID,命名 新主持人和成员,并重新配置一些房间选项的人。
++ 业主: 可以听、说、踢和禁止参加者和游客,切换别人说话能力,看到居民的实际 JID,命名 的新主持人和成员,重新配置所有的房间选择,命名新管理员,并摧毁房间的人。
+
+正如你可以看到,角色和背景以层次结构排列,从强大的房主到卑微的弃儿。这些房间 可以使管理员和业主不仅可以作为个体参与者实施它们的决定,而且可以配置一些空间范围 的选项,尤其是以下方面:
+
++ 任何人都可以发言,还是在房间内只有某些受限制的用户加入对话(即是审帖或主 持房间)?
++ 任何人都可以加入房间,或仅限于某些个人(例如是房间公开或仅限会员)?
+
+这些类型的房间能够在踢人和禁止之外行使更加强大的权限,因为如果只有某些人可以 在房间里说,这就使得垃圾邮件发送者更难攻击,如果只有房间成员可以加入,就可以更强 烈地保护安全,防止滥用。
+
+** TODO 昵称的意义
+
+** 配置相关任务
+
+* Jingle:Jabber 作为多媒体
+
+Jingle的实现其实不需要服务器有什么改动的, 主要是要求客户端的支持. Jingle是利用当前的XMPP协议来作为信令协议(signaling protocol)来建立和协商会话的, 对于这一点, 服务器不需要改动的,因为这个信令协议只不过是扩展IQ packet加个<jingle>. Jingle的关键是如何两个客户端之间建立流通道, 如果有客户端在NAT之后还需要利用ICE协议实现NAT穿越. 既然Jingle基本上不需要服务器的改动, 那么Google GTalk服务器是可以使用的, 于是就有这个成功的case. 
+
+
+周5-迁移用户数据到php，完成对接，预计完成时间到周五；
+a. user通用数据:头像，头像列表
+
+2. 交互系统对接，主要是客户端决定，时间不定；
+a. 时间待定.
+
+3. 重构方案确认
+下周1.

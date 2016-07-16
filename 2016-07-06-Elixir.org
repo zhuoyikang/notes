@@ -259,12 +259,14 @@ https://github.com/joshrotenberg/elixir_cowboy_examples
 
 * ORM Ecto
 
+[[https://segmentfault.com/a/1190000005016957][Elixir Ecto: 入门上手]]
 https://hexdocs.pm/ecto/Ecto.html
 
 * 各种连接 
-+ [[http://elixir-lang.org/][官网]]
-+ [[https://github.com/h4cc/awesome-elixir][Awesome Elixir ]]
++ [[http://elixir-lang.org/][官网]] 官方网站
++ [[https://github.com/h4cc/awesome-elixir][Awesome Elixir ]] 列出了很多好用的Elixir库
++ [[http://developerworks.github.io/2015/01/05/elixir-release-manager/][Elixir发布管理器 Exrm]]  用Exrm可以打出releaase包
++ [[https://segmentfault.com/a/1190000005065688][Elixir: 开发和发布Elixir库]] 此文介绍了如何发布自己的库到hex
++ [[http://developerworks.github.io/2015/09/17/ejabberd-with-elixir-mix/][用Elixir Mix构建Ejabberd发行包]]  Ejabberd相关
++ [[http://blog.plataformatec.com.br/2016/04/running-migration-in-an-exrm-release/][Running migration in an Exrm release]] release之后如何执行migrate的说明
 
-https://github.com/falood/maru
-
-教程:

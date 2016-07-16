@@ -1,0 +1,1 @@
+[[https://medium.com/@brucify/using-rebar3-to-manage-erlang-packages-282f78adff1e#.xjx3hemeo][Rebar3-hex]]

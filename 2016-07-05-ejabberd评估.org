@@ -121,3 +121,91 @@ curl -v -X POST -H "X-Admin: true" -H "Authorization: Bearer QFLVLjNPWWLwaJtZ246
     "password": "ccccc"
   }
 
+* 《英雄联盟》支撑最高750万同时在线用户的聊天服务打造
+
+[[http://www.csdn.net/article/2014-10-27/2822292-how-league-of-legends-scaled-chat-to-70-million-players][连接]]
+[[http://www.slideshare.net/michalptaszek/strange-loop-presentation][ppt]]
+
+
+如上图所示，该游戏的聊天服务需要支撑750万并发用户，2700万日活跃用户，每秒钟需要处理的消息上万条，每台服务器每天处理消息达十亿条。
+
+** 状态
+
+月6700万的独立访问玩家，不包括其他使用这个系统的服务
+日活跃玩家2700万
+750万的并发玩家
+每台服务器每天路由10亿个事件，值得一提的是，CPU和内存使用率只有20-30%
+每秒处理1.1万条消息
+世界范围内部署的chat服务器达数百台，负责运维人员只有3个
+99%的可用率
+
+** 平台
+
+Ejabberd (Erlang based) XMPP server
+Riak
+Load Balancer
+Graphite
+Zabbix
+Nagios
+Jenkins
+Confluence
+
+
+* 将db换成mysql
+https://docs.ejabberd.im/admin/guide/databases/mysql/
+
+
+#+begin_src yaml
+
+  ##
+  ## To handle XML-RPC requests that provide admin credentials:
+  ##
+  # - 
+  #   port: 4560
+  #   module: ejabberd_xmlrpc
+  #   access_commands: {}
+  - 
+    port: 5280
+    module: ejabberd_http
+    request_handlers:
+      "/websocket": ejabberd_http_ws
+      "/api": mod_http_api
+      "/oauth": ejabberd_oauth
+    ##  "/pub/archive": mod_http_fileserver
+    web_admin: true
+    http_bind: true
+    register: true
+    captcha: true
+
+
+commands_admin_access: configure
+commands:
+  - add_commands: open
+  - add_commands: user
+  - add_commands: admin
+  - add_commands: restricted
+oauth_expire: 3600
+oauth_access: all
+
+#+end_src
+
+
+* API操作
+
+开放API
+
+#+begin_src yaml
+  mod_http_api:
+    admin_ip_access: all   
+#+end_src
+
+** 注册新用户
+
+#+begin_src sh
+curl -v -X POST -H "X-Admin: true"  http://localhost:5280/api/register -d '{"user": "ejabberd5", "host": "localhost", "password": "wwww" }'
+#+end_src
+
+** 获取某用户的花名册
+#+begin_src sh
+curl -v -X POST -H "X-Admin: true"  http://localhost:5280/api/get_roster -d '{"user": "ejabberd2", "server": "localhost"}'
+#+end_src

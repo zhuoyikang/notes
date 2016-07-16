@@ -1,0 +1,7 @@
+* 相关链接
+
++ [[https://promisesaplus.com/][官网]]
++ [[http://www.raychase.net/1329][你没有抓住Promises的要点]]
++ [[http://www.slideshare.net/domenicdenicola/callbacks-promises-and-coroutines-oh-my-the-evolution-of-asynchronicity-in-javascript][Callbacks, Promises, and Coroutines (oh my!): Asynchronous Programming Patterns in JavaScript]]
+
+
