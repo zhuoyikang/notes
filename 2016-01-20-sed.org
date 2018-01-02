@@ -2,7 +2,7 @@
 #+TITLE: SedNote
 
 
-mac 下使用sed必须要用 -i '.bak' 指定后缀
+mac 下使用 sed 必须要用 -i '.bak' 指定后缀
 
 # sed replace
 
@@ -54,10 +54,13 @@ http://127.0.0.1/
 
 v1.2
 
--- QA机，演示机
+-- QA 机，演示机
 ws://139.198.2.65:9527
 ws://139.198.2.65:9528  1.20
 
 -> 121
 
 telnet 127.0.0.2 5672
+
+
+  find .  -name "*.go"  |  xargs sed   -i '.bak' 's/time.Now().UnixNano()/GetUdidNow()/g'

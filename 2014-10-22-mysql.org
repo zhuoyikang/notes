@@ -1,13 +1,13 @@
-mysql相关
+mysql 相关
 
 * Mysql:异常字符自动截断
 ** 问题描述
 
-某日服务器数据库出现了一下情况，玩家的角色名会被截断，原来是玩家输入用户名时会有非法的utf8字符，mysql自动将非法字符后面的内容截断了。
+某日服务器数据库出现了一下情况，玩家的角色名会被截断，原来是玩家输入用户名时会有非法的 utf8 字符，mysql 自动将非法字符后面的内容截断了。
 
 ** 解决方法
 
-使用mochieweb中提供的库直接来验证输入是否为合法的utf8字符:
+使用 mochieweb 中提供的库直接来验证输入是否为合法的 utf8 字符:
 
 #+begin_src erlang
 check_utf8(S) when is_list(S) ->
@@ -30,21 +30,21 @@ check_utf8(_) ->
 
 #+end_src
 
-mysql4.1开始分字符集了，在保留数据时候会察看和转换数据编码。最近有个客户反响公布文章，有局部保留后内容被割断了，只保留了一局部，我一测验觉察是编码问题引起的。
+mysql4.1 开始分字符集了，在保留数据时候会察看和转换数据编码。最近有个客户反响公布文章，有局部保留后内容被割断了，只保留了一局部，我一测验觉察是编码问题引起的。
 
-这客户网页和数据库用的都是是big5编码，默认过程连上数据库后会发一句：
+这客户网页和数据库用的都是是 big5 编码，默认过程连上数据库后会发一句：
 
 #+begin_src bash
 www.fo4now.info;SET character_set_connection=big5, character_set_results=big5, character_set_client=binary
 #+end_src
 * 慢查询
-最近使用RoR发现Mysql有很多慢查询，这些慢查询会导致http单个请求的市场延长到3s以上(正常情况<1s)，从而引起unicorn的超时kill，所以必须要消除所有的慢查询。
+最近使用 RoR 发现 Mysql 有很多慢查询，这些慢查询会导致 http 单个请求的市场延长到 3s 以上(正常情况<1s)，从而引起 unicorn 的超时 kill，所以必须要消除所有的慢查询。
 
-** 如何开启慢查询(不重启Mysql)
+** 如何开启慢查询(不重启 Mysql)
 
 [[http://coolnull.com/3312.html][点我]]
 
-正常mysql开启慢查询是通过在/etc/my.cnf添加以下内容，然后重启数据库来实现开启慢查询的。
+正常 mysql 开启慢查询是通过在/etc/my.cnf 添加以下内容，然后重启数据库来实现开启慢查询的。
 
 #+begin_verse
 log-slow-queries=/web/var/localhost-slow.log
@@ -55,8 +55,8 @@ log-queries-not-using-indexes
 
 但线上数据库是不能够随便重启的。
 
-从mysql 5.1.6版本起，general query log 和slow query log支持写文件或写数据库表两种方式，并且日志的开启，输出方式的修改，都可以在global级别动态修改。
-只需简单通过set global log_slow_queries=ON;即可开启慢查询，而不需要重启数据库！
+从 mysql 5.1.6 版本起，general query log 和 slow query log 支持写文件或写数据库表两种方式，并且日志的开启，输出方式的修改，都可以在 global 级别动态修改。
+只需简单通过 set global log_slow_queries=ON;即可开启慢查询，而不需要重启数据库！
 
 
 mysql> show variables like '%slow%';
@@ -86,16 +86,16 @@ mysql> show variables like '%slow%';
 +---------------------+-----------------------------+
 4 rows in set (0.00 sec)
 
-** MySQL慢查询分析mysqldumpslow
+** MySQL 慢查询分析 mysqldumpslow
 
 [[http://www.ccvita.com/410.html][点我]]
 
-mysqldumpslow命令
+mysqldumpslow 命令
 
 /usr/local/bin/mysqldumpslow -s c -t 10 /usr/local/mysql/data/T4F-MBP-13725-slow.log
 
-+ -s, 是表示按照何种方式排序，c、t、l、r分别是按照记录次数、时间、查询时间、返回的记录数来排序，ac、at、al、ar，表示相应的倒序；
-+ -t, 是top n的意思，即为返回前面多少条的数据；
++ -s, 是表示按照何种方式排序，c、t、l、r 分别是按照记录次数、时间、查询时间、返回的记录数来排序，ac、at、al、ar，表示相应的倒序；
++ -t, 是 top n 的意思，即为返回前面多少条的数据；
 + -g, 后边可以写一个正则匹配模式，大小写不敏感的；
 * 随机查询
 
@@ -105,9 +105,9 @@ mysqldumpslow命令
 select * from trans_infos order by rand() limit 100;
 #+end_src
 
-这时候mysql会对每一行数据执行rand()。所以优化的方案时减少rand()的次数.
+这时候 mysql 会对每一行数据执行 rand()。所以优化的方案时减少 rand()的次数.
 
-** 搜索Google，网上基本上都是查询max(id) * rand()来随机获取数据。
+** 搜索 Google，网上基本上都是查询 max(id) * rand()来随机获取数据。
 
 #+begin_src sql
 SELECT *
@@ -123,7 +123,7 @@ GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY '123456' WITH GRANT OPTI
 FLUSH PRIVILEGES;
 #+end_src
 
-* osx上修改mysql配置
+* osx 上修改 mysql 配置
 
 By default, the OS X installation does not use a my.cnf, and MySQL just uses the default values. To set up your own my.cnf, you could just create a file straight in /etc.
 
@@ -139,3 +139,9 @@ sudo /usr/local/opt/mysql/support-files/mysql.server restart
 
 * mysql 详细配置
 http://database.51cto.com/art/201108/285365.htm
+* 修改监听端口
+
+  sudo vi /etc/mysql/mysql.conf.d/mysqld.cnf
+
+* ubuntu 重启 mysql
+  sudo systemctl  restart mysql
