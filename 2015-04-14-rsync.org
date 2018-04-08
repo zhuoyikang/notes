@@ -68,7 +68,7 @@ rsync -vrI   x/* y/
 
 rIpgoDvu
 rsync -rlpgoDvu    x/* y/
-
+chmod -R 755  all_dlc_data
 rsync -rlpgoDvu --delete . ubuntu@xx:/home/ubuntu/dlc
 rsync -rlpgoDvu /var/www/apps/galaxy-empire-server-2/ebin/*  ebin/
 
