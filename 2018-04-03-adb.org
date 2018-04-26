@@ -1,0 +1,9 @@
+* adb
+ 
+  am start -n com.lilithgame.roc.gp
+ 
+  am start -n com.lilithgame.roc.gp/com.lilithgame.roc.gp.LaunchActivity
+
+  am start -n cn.com.conversant.swiftsync.android/cn.com.conversant.swiftsync.android.main.SplashActivity
+
+  
