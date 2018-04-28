@@ -1,10 +1,11 @@
+* 安装
 https://about.gitlab.com/downloads/#centos7
 
  国内镜像
 CentOS/RHEL
 新建 /etc/yum.repos.d/gitlab-ce.repo，内容为
 
-你的CentOS/RHEL版本:   
+你的 CentOS/RHEL 版本:   
 [gitlab-ce]
 name=gitlab-ce
 baseurl=http://mirrors.tuna.tsinghua.edu.cn/gitlab-ce/yum/el7
@@ -17,5 +18,30 @@ gpgkey=https://packages.gitlab.com/gpg.key
 sudo yum makecache
 sudo yum install gitlab-ce
 
-
 sudo gitlab-ctl reconfigure
+
+
+* gitlabruner 切换用户的方式
+
+https://stackoverflow.com/questions/37187899/change-gitlab-ci-runner-user?utm_medium=organic&utm_source=google_rich_qa&utm_campaign=google_rich_qa
+
+ 
+Running ps aux you can see:
+
+/usr/bin/gitlab-ci-multi-runner run --working-directory /home/gitlab-runner --config /etc/gitlab-runner/config.toml --service gitlab-runner --syslog --user gitlab-runner
+Service is running with option --user.
+
+So let's change this, it depends on what distro. you are running it. If systemd, there is a file:
+
+/etc/systemd/system/gitlab-runner.service:
+
+[Service]
+StartLimitInterval=5
+StartLimitBurst=10
+ExecStart=/usr/bin/gitlab-ci-multi-runner "run" "--working-directory" "/home/gitlab-runner" "--config" "/etc/gitlab-runner/config.toml" "--se
+Bingo, let's change this file now:
+
+gitlab-runner uninstall
+
+gitlab-runner install --working-directory /home/ubuntu --user ubuntu
+reboot the machine or reload the service (i.e. systemctl daemon-reload), et voilà!
